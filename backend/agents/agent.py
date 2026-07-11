@@ -343,8 +343,9 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                     rec["blocked"] = True
                     rec["block_reason"] = blocked_reason
                     flags = list(rec.get("flags") or [])
+                    stop_flag = f"SAFETY STOP: {blocked_reason}"
                     if not any("SAFETY STOP" in str(f) for f in flags):
-                        flags.insert(0, f"SAFETY STOP: {blocked_reason}")
+                        flags.insert(0, stop_flag)
                     rec["flags"] = flags
                 # Authoritative renal/hepatic-impairment flags (model-independent).
                 _apply_organ_function_flags(rec, case)

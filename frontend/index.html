@@ -122,6 +122,7 @@
   .seg .opt{display:block;text-align:center;padding:11px;border:1px solid var(--line);border-radius:11px;
     font-size:.92rem;font-weight:500;color:var(--ink-2);cursor:pointer;transition:.12s;background:#fff}
   .seg input:checked + .opt{border-color:var(--teal);background:var(--teal-wash);color:var(--teal-deep)}
+  .seg input:disabled + .opt{opacity:.38;cursor:not-allowed;background:var(--line);color:var(--ink-3)}
   .toggles{display:flex;gap:12px;flex-wrap:wrap}
   .toggle{flex:1;min-width:180px;display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--line);
     border-radius:12px;cursor:pointer;background:#fff;font-size:.92rem;color:var(--ink-2);font-weight:500;transition:.12s}
@@ -471,8 +472,9 @@
         <label>Route</label>
         <div class="seg">
           <label><input type="radio" name="route" value="iv" checked><span class="opt">Intravenous</span></label>
-          <label><input type="radio" name="route" value="oral"><span class="opt">Oral</span></label>
+          <label><input type="radio" name="route" value="oral" id="route-oral"><span class="opt">Oral</span></label>
         </div>
+        <div class="hint" id="route-hint" hidden></div>
       </div>
 
       <div class="field">
@@ -604,12 +606,12 @@ const $ = id => document.getElementById(id);
 
 /* ---------------- drug catalogue (for landing + display names) ---------------- */
 const DRUGS = {
-  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"NTI → TDM"},
-  gentamicin:{name:"Gentamicin",path:"renal / GFR · Cmax/MIC",edge:"NTI → TDM; extend interval in the young"},
-  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"Cmax/MIC aminoglycoside; TDM"},
+  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"NTI → TDM",ivOnly:true},
+  gentamicin:{name:"Gentamicin",path:"renal / GFR · Cmax/MIC",edge:"NTI → TDM; extend interval in the young",ivOnly:true},
+  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"Cmax/MIC aminoglycoside; TDM",ivOnly:true},
   ampicillin:{name:"Ampicillin",path:"renal / GFR · time>MIC",edge:"Daily-dose match is a proxy for fT>MIC"},
-  meropenem:{name:"Meropenem",path:"renal / GFR · time>MIC",edge:"time>MIC proxy; meningitis higher"},
-  cefotaxime:{name:"Cefotaxime",path:"renal / GFR · time>MIC",edge:"time>MIC proxy"},
+  meropenem:{name:"Meropenem",path:"renal / GFR · time>MIC",edge:"time>MIC proxy; meningitis higher",ivOnly:true},
+  cefotaxime:{name:"Cefotaxime",path:"renal / GFR · time>MIC",edge:"time>MIC proxy",ivOnly:true},
   acyclovir:{name:"Acyclovir",path:"renal / GFR · Css",edge:"Indication- and age-band sensitive"},
   levetiracetam:{name:"Levetiracetam",path:"renal / GFR · Css",edge:"Mostly renal unchanged"},
   fluconazole:{name:"Fluconazole",path:"renal / GFR · Css",edge:"Pediatric CL may exceed adult allometry"},
@@ -630,6 +632,23 @@ const DRUGS = {
     `<div class="drug"><div class="name">${d.name}</div><div class="path">${d.path}</div><div class="edge">${d.edge}</div></div>`
   ).join("");
 })();
+
+/* ---------------- route constraints (gray out oral for IV-only drugs) ---------------- */
+function applyRouteConstraints(){
+  const d = DRUGS[$("drug").value] || {};
+  const oral = $("route-oral"), hint = $("route-hint");
+  if(d.ivOnly){
+    oral.disabled = true;
+    if(oral.checked){ document.querySelector('input[name="route"][value="iv"]').checked = true; }
+    hint.textContent = `${d.name} is not systemically absorbed orally — IV/IM only.`;
+    hint.hidden = false;
+  } else {
+    oral.disabled = false;
+    hint.hidden = true;
+  }
+}
+$("drug").addEventListener("change", applyRouteConstraints);
+applyRouteConstraints();
 
 /* ---------------- router ---------------- */
 let currentCase = null, currentRec = null;

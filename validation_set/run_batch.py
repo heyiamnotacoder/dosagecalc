@@ -25,7 +25,14 @@ VSET = Path(__file__).resolve().parent
 DRUGS = json.loads((VSET / "drug_data.json").read_text())["drugs"]
 GUIDE = json.loads((VSET / "guideline_data.json").read_text())
 SCENARIOS = GUIDE["scenarios"]
-RESULT = ROOT / "result.md"
+# Optional --tag w1 for parallel workers (avoids result.md write races).
+_TAG = None
+if "--tag" in sys.argv:
+    _i = sys.argv.index("--tag")
+    _TAG = sys.argv[_i + 1]
+    del sys.argv[_i:_i + 2]
+RESULT = ROOT / (f"result_{_TAG}.md" if _TAG else "result.md")
+USAGE_LOG = VSET / (f"usage_log_{_TAG}.jsonl" if _TAG else "usage_log.jsonl")
 
 BAND_STRICT = (0.67, 1.5)
 BAND_WIDE = (0.5, 2.0)
@@ -132,9 +139,6 @@ def append_result(rows: list[dict]) -> None:
             lines.append(f"- **Grade rationale:** {g['grade_rationale'][:400]}\n")
     prev = RESULT.read_text() if RESULT.exists() else ""
     RESULT.write_text(prev + "".join(lines))
-
-
-USAGE_LOG = VSET / "usage_log.jsonl"
 
 
 def _tok_totals(rows: list[dict]) -> dict:

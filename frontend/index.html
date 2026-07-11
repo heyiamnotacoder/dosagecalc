@@ -193,7 +193,7 @@
   .viz .cap{margin-top:8px;font-size:.8rem;color:var(--ink-3);text-align:center}
   .console{background:var(--console);border-radius:16px;box-shadow:var(--shadow);padding:16px 16px 8px;
     font-family:var(--mono);font-size:.8rem;line-height:1.65;color:var(--console-ink);
-    height:230px;overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
+    height:230px;overflow-x:hidden;overflow-y:auto;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
   .console::before{content:"";position:absolute;top:0;left:0;right:0;height:34px;
     background:linear-gradient(var(--console),transparent);z-index:2;pointer-events:none}
   .console .line{opacity:0;animation:cin .4s ease forwards;white-space:pre-wrap;word-break:break-word}
@@ -437,9 +437,17 @@
 
       <div class="neo" id="neo">
         <strong>Under 2 yr — maturation needs postmenstrual age.</strong>
-        <label for="ga">Gestational age at birth (weeks)</label>
-        <input id="ga" type="number" step="0.5" placeholder="40 = term; leave blank if unknown">
-        <div class="hint">Blank = assume term (40 wk). A preterm infant dosed as term is over-estimated.</div>
+        <div class="grid2" style="margin-top:8px">
+          <div>
+            <label for="ga">Gestational age at birth (weeks)</label>
+            <input id="ga" type="number" step="0.5" min="22" max="44" placeholder="40 = term">
+          </div>
+          <div>
+            <label for="pna">Postnatal age (days)</label>
+            <input id="pna" type="number" step="1" min="0" placeholder="e.g. 5 for day-5 neonate">
+          </div>
+        </div>
+        <div class="hint">Blank GA = assume term (40 wk). PNA days refine PMA when age in years is coarse (e.g. neonate day 5).</div>
       </div>
 
       <div class="field">
@@ -664,20 +672,47 @@ function handleStep(text){
 }
 
 /* ---------------- run the case (SSE stream) ---------------- */
+function formError(msg){
+  const el = $("keyhint");
+  el.textContent = msg; el.classList.add("warn");
+}
 $("form").addEventListener("submit", async (e)=>{
   e.preventDefault();
   const drug = $("drug").value;
+  let ageY = parseFloat(age.value);
+  const wt = parseFloat($("weight").value);
+  const pnaDays = $("pna") ? parseFloat($("pna").value) : NaN;
+  // neonate convenience: if age blank/0 and PNA days given, derive age_years
+  if((!Number.isFinite(ageY) || ageY < 0) && Number.isFinite(pnaDays) && pnaDays >= 0){
+    ageY = pnaDays / 365.25;
+    age.value = ageY.toFixed(3);
+  }
+  if(!Number.isFinite(ageY) || ageY < 0){
+    formError("Enter a valid age (years), or postnatal age in days for neonates."); return;
+  }
+  if(!Number.isFinite(wt) || wt <= 0){
+    formError("Enter a valid weight in kg (> 0)."); return;
+  }
+  $("keyhint").classList.remove("warn");
+  fetch("/health").then(r=>r.json()).then(h=>{
+    if(h.has_api_key) $("keyhint").textContent = `Model · ${h.model}`;
+  }).catch(()=>{});
+
   const payload = {
     drug,
     indication: $("indication").value || null,
-    age_years: parseFloat(age.value),
-    weight_kg: parseFloat($("weight").value),
+    age_years: ageY,
+    weight_kg: wt,
     renal_impairment: $("renal").checked,
     hepatic_impairment: $("hepatic").checked,
     route: document.querySelector('input[name="route"]:checked').value,
   };
   const ga = $("ga").value;
-  if(parseFloat(age.value) < 2 && ga) payload.gestational_age_weeks = parseFloat(ga);
+  if(ageY < 2 && ga && Number.isFinite(parseFloat(ga))) payload.gestational_age_weeks = parseFloat(ga);
+  if(ageY < 2 && Number.isFinite(pnaDays) && pnaDays >= 0){
+    payload.postnatal_age_days = pnaDays;
+    payload.postnatal_age_weeks = pnaDays / 7.0;
+  }
   currentCase = payload;
 
   // prep loading screen
@@ -741,9 +776,15 @@ async function finishAndRender(data){
 }
 
 /* ---------------- render result ---------------- */
-function mdToHtml(s){ return "<p>"+ esc(s)
-  .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
-  .replace(/\n\n+/g,"</p><p>").replace(/\n/g,"<br>") +"</p>"; }
+function mdToHtml(s){
+  const raw = esc(s||"");
+  // bullet lines → list items
+  let t = raw.replace(/(?:^|\n)[-*] (.+)/g, "\n<li>$1</li>");
+  t = t.replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, m => "<ul class='plain'>"+m.replace(/\n/g,"")+"</ul>");
+  t = t.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  t = t.replace(/\n\n+/g,"</p><p>").replace(/\n/g,"<br>");
+  return "<p>"+ t +"</p>";
+}
 function linkify(s){ return esc(s).replace(/(https?:\/\/[^\s)]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>'); }
 function fmtList(a){ return (a&&a.length)? a.join(", ") : null; }
 

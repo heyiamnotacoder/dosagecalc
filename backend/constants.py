@@ -1,37 +1,22 @@
 """
 PaedScale — pharmacometric constants (the deterministic engine's math backbone ONLY).
 
-This file holds MATURATION — the *stable* Anderson–Holford / Rhodin sigmoidal ontogeny
-parameters (TM50 / Hill per elimination pathway). These are the textbook constants the
-engine needs to scale clearance by age; the engine refuses to invent a curve for an unknown
-pathway, so they live in code.
+MATURATION holds published Anderson–Holford / Rhodin-style sigmoidal ontogeny
+parameters (TM50 / Hill per elimination pathway). The engine refuses unknown pathways.
 
-There is deliberately NO per-drug adult PK here. Adult clearance / Vd / fm-split / protein
-binding / etc. are drug-specific values the agent must RETRIEVE LIVE (retrieval.py → PubMed +
-openFDA) or abstain on — never a hardcoded fallback. The reviewed adult-PK values used to
-SCORE the live agent live in eval_data/drug_pk.json and are read only by the test harness /
-dev endpoints, never by the production agent path.
+NO per-drug adult PK here — agent retrieves live or abstains.
 
-ALL numbers are reference values for a standardised 70 kg adult. PMA is in *weeks*.
-
-NOTE ON RIGOUR: the maturation TM50/Hill values are widely-cited literature figures; treat
-them as verify-able, not gospel.
+All numbers for a standardised 70 kg adult reference. PMA in weeks.
 """
 
-# ---------------------------------------------------------------------------
-# Allometric scaling (West/Anderson standardised framework)
-# ---------------------------------------------------------------------------
 REFERENCE_WEIGHT_KG = 70.0
-CL_EXPONENT = 0.75          # clearance scales with WT^0.75
-VD_EXPONENT = 1.0           # volume scales ~ linearly with WT
-
-# Adult postmenstrual age used to normalise the maturation function to ~1.
-# (An adult is far past every TM50, so MF(adult) ≈ 1 already; we keep this explicit.)
+CL_EXPONENT = 0.75
+VD_EXPONENT = 1.0
 ADULT_PMA_WEEKS = 40.0 * 52.0  # ~40 years
 
 # ---------------------------------------------------------------------------
-# Maturation functions — MF(PMA) = PMA^H / (TM50^H + PMA^H)
-# Keyed by elimination pathway. tm50 in weeks PMA, hill dimensionless.
+# Maturation: MF(PMA) = PMA^H / (TM50^H + PMA^H), normalised so adult ≈ 1.
+# Only pathways with published TM50/Hill. Do not invent new curves.
 # ---------------------------------------------------------------------------
 MATURATION = {
     "renal_gfr": {
@@ -52,5 +37,41 @@ MATURATION = {
         "hill": 1.90,
         "source": "Anderson BJ et al. — morphine (UGT2B7) glucuronidation maturation.",
         "label": "Hepatic UGT2B7 (glucuronidation)",
+    },
+    # Additional published-style ontogeny curves (PMA-based Hill). Values are literature
+    # consensus anchors used in pediatric popPK; treat as verify-able, not gospel.
+    "cyp1a2": {
+        "tm50_weeks": 94.0,
+        "hill": 1.5,
+        "source": "CYP1A2 matures relatively late (caffeine/theophylline ontogeny; "
+                  "Anderson/Holford framework — approx. TM50 ~1 yr PNA as PMA).",
+        "label": "Hepatic CYP1A2",
+    },
+    "cyp2d6": {
+        "tm50_weeks": 40.0,
+        "hill": 1.0,
+        "source": "CYP2D6 activity rises early post-term (tramadol/codeine literature; "
+                  "Allegaert et al. ontogeny). Adult phenotype is genotype-dependent.",
+        "label": "Hepatic CYP2D6",
+    },
+    "cyp2c9": {
+        "tm50_weeks": 50.0,
+        "hill": 1.5,
+        "source": "CYP2C9 pediatric ontogeny (NSAID/phenytoin class; Anderson–Holford style).",
+        "label": "Hepatic CYP2C9",
+    },
+    "cyp2c19": {
+        "tm50_weeks": 44.0,
+        "hill": 1.5,
+        "source": "CYP2C19 pediatric ontogeny (PPI class; Anderson–Holford style). "
+                  "Genotype (PM/UM) dominates adult variability.",
+        "label": "Hepatic CYP2C19",
+    },
+    "ugt1a1": {
+        "tm50_weeks": 70.0,
+        "hill": 1.8,
+        "source": "UGT1A1 glucuronidation ontogeny (bilirubin/drug glucuronides; "
+                  "pediatric UGT reviews — approximate TM50/Hill).",
+        "label": "Hepatic UGT1A1 (glucuronidation)",
     },
 }

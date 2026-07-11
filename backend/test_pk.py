@@ -66,13 +66,26 @@ def test_refuses_unknown_pathway():
     try:
         compute_pediatric_dose(
             drug="mystery", weight_kg=10, cl_adult_l_h=10, vd_adult_l=50,
-            fm={"cyp2c19": 1.0}, age_years=1,
+            fm={"not_a_real_pathway": 1.0}, age_years=1,
         )
     except ValueError as e:
         assert "maturation curve" in str(e)
         print("  refuses to invent a maturation curve for unknown pathway  OK")
         return
     raise AssertionError("should have refused unknown pathway")
+
+
+def test_new_pathways_accepted():
+    """Expanded MATURATION keys must be callable (cyp1a2, cyp2d6, …)."""
+    from constants import MATURATION
+    for key in ("cyp1a2", "cyp2d6", "cyp2c9", "cyp2c19", "ugt1a1"):
+        assert key in MATURATION, key
+        r = compute_pediatric_dose(
+            drug="probe", weight_kg=10, cl_adult_l_h=20, vd_adult_l=50,
+            fm={key: 1.0}, age_years=1, adult_dose_mg_per_day=100,
+        )
+        assert r.cl_child_l_h > 0 and r.pathways[0].pathway == key
+    print(f"  new pathways accepted: cyp1a2/2d6/2c9/2c19, ugt1a1  OK")
 
 
 def test_oral_bioavailability():
@@ -182,6 +195,7 @@ if __name__ == "__main__":
     test_maturation_monotonic()
     test_neonate_clears_below_linear()
     test_refuses_unknown_pathway()
+    test_new_pathways_accepted()
     test_oral_bioavailability()
     test_time_mic_flag()
     test_safety_bounds_fire()

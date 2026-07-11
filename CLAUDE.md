@@ -7,6 +7,10 @@ cited, auditable rationale. **Decision support, not prescribing.**
 The concept brief is `concept.html`; the product spec is `PRD.md`. This file is the
 engineering source of truth. `AGENT.md` holds the short version and routes here.
 
+## RULES:
+If you want to check browser use browser harness first. if allow external debugging is not enabled ask user to do it. It is more token efficient.
+If browser harness cant solve the problem and you must have to use browser then use claude in chrome
+
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that
 eliminate the drug are still maturing. Scaling an adult dose by weight over-doses the young.

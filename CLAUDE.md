@@ -19,28 +19,26 @@ PaedScale encodes the gap between the naive linear line and the true maturation 
 
 ## Architecture
 ```
-frontend/index.html         self-contained UI (form → /calculate → graded result)
+frontend/index.html         self-contained UI (form → /calculate/stream → graded result + chat)
 backend/
-  constants.py              MATURATION params (TM50/Hill) ONLY — the engine math backbone. NO per-drug PK.
-  pk_engine.py              DETERMINISTIC math: allometry × maturation, dose solve, oral-F, safety  (no key)
-  retrieval_tools.py        real httpx retrieval: NCBI E-utilities (PubMed) + openFDA  (no key)
-  retrieval.py              RETRIEVAL SUBAGENT (cheap model) → cited PK+mechanism dossier, or abstains
-  mcp_server.py             MCP server exposing the retrieval tools (FastMCP, stdio)
-  agent.py                  Opus ORCHESTRATOR: retrieve_drug_data → compute → concordance → grade
-  mechanism_score.py        mechanistic-reasoning scorer (6 PRD dimensions)  (no key)
-  main.py                   FastAPI: / (frontend), /calculate (agent), /pk (DEV/EVAL engine), /health
-  test_pk.py                deterministic engine + scorer tests + concordance  (no key)
-  test_agent.py             end-to-end eval: dose, concordance, mechanistic score, latency, cost
-  eval_data/                ANSWER KEYS ONLY — read by the harness, NEVER by the agent:
-    drug_pk.json              reviewed adult PK oracle (scores the live agent)
-    guidelines.json           pediatric guideline doses for the concordance band
-    mechanism_truth.json      correct mechanism per drug (the 6 dimensions)
+  constants.py              MATURATION params (TM50/Hill) ONLY — engine backbone. NO per-drug PK.
+  pk_engine.py              DETERMINISTIC math: allometry × maturation, dose solve, oral-F, safety
+  edge_cases.py             deterministic flags: prodrug / obesity / protein-binding / illness
+  pk_cache.py               bounded in-process LRU for live dossiers (Render single-dyno shared pool)
+  skills/                   lean markdown skills (mechanism, pubmed, openfda, webfetch, edge_cases)
+  retrieval_tools.py        httpx: PubMed E-utilities + openFDA + web_fetch
+  retrieval.py              RETRIEVAL SUBAGENT → cited dossier (or cache hit), or abstains
+  mcp_server.py             MCP server for the same retrieval tools (FastMCP, stdio)
+  agent.py                  Opus ORCHESTRATOR: load_skill → retrieve → compute → edge_cases → grade
+  mechanism_score.py        mechanistic-reasoning scorer (6 PRD dimensions)
+  main.py                   FastAPI: /, /calculate, /calculate/stream, /chat, /pk, /health
+  test_pk.py / test_agent.py
+  eval_data/                ANSWER KEYS ONLY — harness never product path
 ```
 
 **No hardcoded per-drug PK in the product path.** The agent RETRIEVES adult PK live
-(`retrieval.py` → PubMed + openFDA) or ABSTAINS (grade D) — there is no seed fallback. The
-reviewed PK/guideline/mechanism data lives in `eval_data/` and is read only by the test harness
-(and the no-key `/pk` dev endpoint) to *score* the live agent. This keeps the eval honest.
+(`retrieval.py` → PubMed + openFDA) or serves a **TTL-bounded cache hit**, or ABSTAINS (grade D).
+`eval_data/` is harness/dev only.
 
 Split of labour: **Python does the arithmetic; Claude does the judgment** (drug → pathway
 → maturation-curve mapping and the written justification). This is the whole point — the
@@ -66,13 +64,16 @@ MF(PMA)  = PMA^H / (TM50^H + PMA^H)      # normalised so adult ≈ 1
 - The engine **refuses to invent a maturation curve** for an unknown pathway (raises) and
   **flags** unattributed clearance rather than hiding it. This is cite-or-abstain in code.
 
-Known pathway keys: `renal_gfr`, `cyp3a4`, `ugt2b7` (extend MATURATION to add more).
+Known pathway keys: `renal_gfr`, `cyp3a4`, `ugt2b7`, `cyp1a2`, `cyp2d6`, `cyp2c9`,
+`cyp2c19`, `ugt1a1`. Extend MATURATION only with **published** TM50/Hill — never invent.
+
+**Skills:** lean files in `backend/skills/` loaded via `load_skill` — keep agent SYSTEM short.
+**Edge cases:** `assess_edge_cases` flags prodrug/obesity/high-PB/illness when evidence exists.
+**PK cache:** `pk_cache.py` — max entries/bytes/TTL (env); single dyno shared; no multi-dyno Redis yet.
 
 ## The seeded drugs
-Stage 1 = three archetypes. Stage 2 adds five more, all of which **reuse the three
-already-sourced maturation curves** (renal_gfr / cyp3a4) — no new ontogeny constant is
-invented, so cite-or-abstain holds. What Stage 2 adds is drug breadth plus two new
-exposure-metric archetypes (Cmax/MIC and time>MIC).
+Stage 1 = three archetypes. Stage 2 adds five more. Demo drugs primarily use
+`renal_gfr` / `cyp3a4` / `ugt2b7`; extra pathways support broader drug space without inventing curves.
 
 | Stage | Drug | Pathway | Metric | Edge to flag |
 |-------|------|---------|--------|--------------|

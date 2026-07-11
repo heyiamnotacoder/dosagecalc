@@ -28,7 +28,7 @@ Decision support for a clinician — NOT a prescriber.
 Pipeline (lean):
 1. load_skill('mechanism') if needed → map elimination / fm / target_metric / mechanism fields.
    Empty lists for absent transporters/metabolites. Cite-or-abstain.
-2. retrieve_drug_data FIRST — only PK source. Null/unavailable → grade D, no invented numbers.
+2. retrieve_drug_data FIRST — only PK source (live or shared cache). Null/unavailable → grade D, no invented numbers.
 3. compute_pediatric_dose with retrieved PK + child covariates (use case renal/hepatic fractions).
 4. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
 5. web_search pediatric guideline → concordance 0.67×–1.5× (none → grade B).

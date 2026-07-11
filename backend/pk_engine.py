@@ -79,6 +79,10 @@ class DoseResult:
     dose_basis: str = ""           # human-readable explanation of the solve
     # safety
     warnings: list[str] = field(default_factory=list)
+    # hard stop: set when the case is NOT prescribable (non-viable route / above-toxic dose).
+    # When True, recommended_dose_* is held at None and block_reason carries the message.
+    blocked: bool = False
+    block_reason: str = ""
 
 
 def _resolve_pma_weeks(
@@ -131,6 +135,7 @@ def compute_pediatric_dose(
     effective_dose_mg_per_kg_per_day: Optional[float] = None,
     route: str = "iv",                      # child administration route ("iv" | "oral")
     oral_bioavailability: float = 1.0,      # pediatric F; applied only when route == "oral"
+    routes_allowed: Optional[list[str]] = None,  # explicit viable routes; None = infer from F
     assume_term: bool = True,
 ) -> DoseResult:
     """Scale adult PK to a pediatric dose via allometry × pathway-wise maturation.
@@ -208,6 +213,27 @@ def compute_pediatric_dose(
         target_metric=target_metric,
         warnings=warnings,
     )
+
+    # ---- route viability HARD STOP ----------------------------------------
+    # A non-prescribable route yields NO dose (not a soft flag). Non-viable when an explicit
+    # allow-list excludes the route, or (heuristic) an oral route is requested for a drug that
+    # is not systemically absorbed orally (F <= 0). Child physiology above is still returned.
+    _route = (route or "iv").lower()
+    _non_viable = False
+    if routes_allowed:
+        _non_viable = _route not in {r.lower() for r in routes_allowed}
+    elif _route == "oral" and (oral_bioavailability is None or oral_bioavailability <= 0):
+        _non_viable = True
+    if _non_viable:
+        result.blocked = True
+        result.block_reason = (
+            f"SAFETY STOP — ROUTE NOT VIABLE: {drug} is not systemically absorbed via the "
+            f"{_route} route (F=0); a systemic-exposure-matched dose cannot be delivered this "
+            f"way. IV/IM required."
+        )
+        result.dose_basis = result.block_reason
+        result.warnings.append(result.block_reason)
+        return result  # withhold the dose solve entirely
 
     # ---- dose solve -------------------------------------------------------
     # css / auc / time_mic all match the ADULT SYSTEMIC exposure by scaling the daily
@@ -300,11 +326,17 @@ def compute_pediatric_dose(
     dpk = result.recommended_dose_mg_per_kg_per_day
     if dpk is not None:
         if toxic_dose_mg_per_kg_per_day is not None and dpk > toxic_dose_mg_per_kg_per_day:
-            result.warnings.append(
-                f"CALCULATED DOSE {dpk:.2f} mg/kg/day EXCEEDS the stated toxic threshold "
-                f"({toxic_dose_mg_per_kg_per_day} mg/kg/day) — do NOT recommend."
+            # HARD STOP: an above-toxic dose is never returned as a recommendation.
+            result.blocked = True
+            result.block_reason = (
+                f"SAFETY STOP — DOSE EXCEEDS TOXIC THRESHOLD: computed {dpk:.2f} mg/kg/day "
+                f"> toxic {toxic_dose_mg_per_kg_per_day} mg/kg/day; not prescribable."
             )
+            result.warnings.append(result.block_reason)
+            result.recommended_dose_mg_per_day = None
+            result.recommended_dose_mg_per_kg_per_day = None
         if effective_dose_mg_per_kg_per_day is not None and dpk < effective_dose_mg_per_kg_per_day:
+            # Below-effective stays a SOFT flag — a sub-therapeutic estimate is still informative.
             result.warnings.append(
                 f"CALCULATED DOSE {dpk:.2f} mg/kg/day is BELOW the minimum effective dose "
                 f"({effective_dose_mg_per_kg_per_day} mg/kg/day) — likely sub-therapeutic."
@@ -348,4 +380,6 @@ def result_to_dict(r: DoseResult) -> dict:
             for p in r.pathways
         ],
         "warnings": r.warnings,
+        "blocked": r.blocked,
+        "block_reason": r.block_reason,
     }

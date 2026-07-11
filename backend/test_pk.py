@@ -161,7 +161,7 @@ def test_time_mic_flag():
 
 
 def test_safety_bounds_fire():
-    """Passing toxic/effective thresholds must trigger the safety warnings when breached."""
+    """An above-toxic dose must HARD STOP: blocked, no dose returned, SAFETY STOP message."""
     s = DRUG_SEED["amikacin"]  # cmax → child mg/kg ≈ adult mg/kg
     # Feed an absurdly high adult dose so the child mg/kg blows past the toxic bound.
     r = compute_pediatric_dose(
@@ -171,8 +171,31 @@ def test_safety_bounds_fire():
         toxic_dose_mg_per_kg_per_day=s["toxic_dose_mg_per_kg_per_day"],
         effective_dose_mg_per_kg_per_day=s["effective_dose_mg_per_kg_per_day"],
     )
-    assert any("EXCEEDS the stated toxic threshold" in w for w in r.warnings), r.warnings
-    print("  safety bounds: toxic-threshold breach flagged  OK")
+    assert r.blocked, r.warnings
+    assert r.recommended_dose_mg_per_kg_per_day is None and r.recommended_dose_mg_per_day is None
+    assert any("EXCEEDS TOXIC THRESHOLD" in w for w in r.warnings), r.warnings
+    print("  safety bounds: above-toxic dose HARD STOPPED (blocked, no dose)  OK")
+
+
+def test_route_not_viable_hard_stop():
+    """Oral route for a not-orally-absorbed drug (F=0) must HARD STOP with no dose."""
+    s = DRUG_SEED["gentamicin"]
+    r = compute_pediatric_dose(
+        drug="gentamicin", weight_kg=12, cl_adult_l_h=s["cl_adult_l_h"],
+        vd_adult_l=s["vd_adult_l"], fm=s["fm"], target_metric="cmax",
+        age_years=2, adult_dose_mg_per_day=s["typical_adult_dose_mg_per_day"],
+        route="oral", oral_bioavailability=0.0,
+    )
+    assert r.blocked and r.recommended_dose_mg_per_kg_per_day is None
+    assert "ROUTE NOT VIABLE" in r.block_reason
+    # same drug IV must still solve a dose
+    r_iv = compute_pediatric_dose(
+        drug="gentamicin", weight_kg=12, cl_adult_l_h=s["cl_adult_l_h"],
+        vd_adult_l=s["vd_adult_l"], fm=s["fm"], target_metric="cmax",
+        age_years=2, adult_dose_mg_per_day=s["typical_adult_dose_mg_per_day"], route="iv",
+    )
+    assert not r_iv.blocked and r_iv.recommended_dose_mg_per_kg_per_day is not None
+    print("  route viability: oral F=0 HARD STOPPED, IV unaffected  OK")
 
 
 def test_mechanism_scorer():
@@ -242,6 +265,7 @@ if __name__ == "__main__":
     test_oral_bioavailability()
     test_time_mic_flag()
     test_safety_bounds_fire()
+    test_route_not_viable_hard_stop()
     test_mechanism_scorer()
     concordance_check()
     print("\nAll structural tests passed.")

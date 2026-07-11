@@ -242,6 +242,11 @@
   .sec h3::after{content:"";flex:1;height:1px;background:var(--line-2)}
   .flag{padding:11px 14px;border-radius:11px;background:var(--amber-wash);border-left:3px solid var(--amber);font-size:.9rem;margin:8px 0;color:#5f4310}
   .flag.stop{background:var(--red-wash);border-left-color:var(--red);color:#7a2a2a}
+  .stopbanner{display:flex;gap:13px;align-items:flex-start;padding:15px 17px;margin:0 0 18px;border-radius:13px;
+    background:var(--red-wash);border:1px solid var(--red);color:#7a2a2a}
+  .stopbanner .ico{font-size:1.4rem;line-height:1}
+  .stopbanner b{font-size:1.02rem;color:var(--red)}
+  .stopbanner .msg{font-size:.9rem;margin-top:3px;color:#7a2a2a}
   .conc{font-size:.94rem;padding:14px 16px;border-radius:12px;background:var(--teal-wash);color:var(--teal-deep)}
   .conc.fail{background:var(--red-wash);color:#7a2a2a}
   .conc .ratio{font-family:var(--mono);font-weight:600}
@@ -801,9 +806,16 @@ function renderResult(data){
 
   let h = `<div class="panel">`;
 
-  // dose hero
+  // hard-stop banner: a non-prescribable case shows an error, never a dose
+  const blockReason = r.block_reason || ((r.flags||[]).find(f=>/SAFETY STOP/i.test(f))||"").replace(/^SAFETY STOP:\s*/i,"");
+  const blocked = !!(r.blocked || blockReason);
+  if(blocked){
+    h += `<div class="stopbanner"><span class="ico">⛔</span><div><b>Not prescribable</b><div class="msg">${esc(blockReason||"This case did not pass a safety check — no dose is recommended.")}</div></div></div>`;
+  }
+
+  // dose hero (suppressed to "—" when blocked)
   h += `<div class="dose-hero"><div class="dose-primary">`;
-  h += dpk!=null
+  h += (dpk!=null && !blocked)
     ? `<div class="dose-num"><span class="big">${dpk}</span><span class="unit">mg/kg/day</span></div>`
     : `<div class="dose-num"><span class="big">—</span></div>`;
   const metrics = [];

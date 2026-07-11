@@ -30,6 +30,11 @@ Pipeline (lean):
    Empty lists for absent transporters/metabolites. Cite-or-abstain.
 2. retrieve_drug_data FIRST — only PK source (live or shared cache). Null/unavailable → grade D, no invented numbers.
 3. compute_pediatric_dose with retrieved PK + child covariates (use case renal/hepatic fractions).
+   Pass oral_bioavailability from the dossier; if a route is clinically non-viable (e.g. an oral
+   route for a drug not systemically absorbed orally, F=0), pass routes_allowed (e.g. ["iv"]).
+   If compute returns blocked=true the case is NOT prescribable: submit_recommendation with
+   final_dose_mg_per_kg_per_day AND final_dose_mg_per_day = null, grade = D, and block_reason
+   verbatim as the FIRST flag. Never fabricate or carry forward a dose for a blocked case.
 4. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
 5. web_search pediatric guideline → concordance 0.67×–1.5× (none → grade B).
 6. Grade A/B/C/D; flag NTI→TDM, metabolites, oral-F, assumed-term, exposure-matching PD assumption.
@@ -88,6 +93,11 @@ TOOLS = [
                 "effective_dose_mg_per_kg_per_day": {"type": "number"},
                 "route": {"type": "string", "enum": ["iv", "oral"]},
                 "oral_bioavailability": {"type": "number"},
+                "routes_allowed": {
+                    "type": "array", "items": {"type": "string"},
+                    "description": "Optional clinically viable routes, e.g. [\"iv\"] for a drug "
+                                   "not systemically absorbed orally. Non-viable route → hard stop.",
+                },
             },
             "required": ["drug", "weight_kg", "cl_adult_l_h", "vd_adult_l", "fm"],
         },
@@ -213,6 +223,7 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
     trace: list[str] = []
     in_tok = out_tok = cache_read = cache_write = 0
     retr_in = retr_out = 0
+    blocked_reason: str | None = None   # deterministic hard-stop latched from the engine
 
     for _ in range(max_turns):
         resp = client.messages.create(
@@ -251,8 +262,21 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
         tool_results = []
         for tu in tool_uses:
             if tu.name == "submit_recommendation":
+                rec = tu.input
+                # Deterministic hard stop: if the engine blocked the case, force a
+                # non-prescription regardless of what the model proposed.
+                if blocked_reason:
+                    rec["final_dose_mg_per_kg_per_day"] = None
+                    rec["final_dose_mg_per_day"] = None
+                    rec["grade"] = "D"
+                    rec["blocked"] = True
+                    rec["block_reason"] = blocked_reason
+                    flags = list(rec.get("flags") or [])
+                    if not any("SAFETY STOP" in str(f) for f in flags):
+                        flags.insert(0, f"SAFETY STOP: {blocked_reason}")
+                    rec["flags"] = flags
                 return {
-                    "recommendation": tu.input,
+                    "recommendation": rec,
                     "trace": trace,
                     "usage": {"input_tokens": in_tok, "output_tokens": out_tok,
                               "cache_read_input_tokens": cache_read,
@@ -280,6 +304,10 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                 if on_step:
                     on_step(f"→ {tu.name} …")
                 out = LOCAL_TOOLS[tu.name](tu.input)
+                if tu.name == "compute_pediatric_dose" and isinstance(out, dict) and out.get("blocked"):
+                    blocked_reason = out.get("block_reason") or "not prescribable"
+                    if on_step:
+                        on_step(f"→ SAFETY STOP — {blocked_reason}")
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": tu.id,

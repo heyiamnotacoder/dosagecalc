@@ -1,20 +1,11 @@
 """
-PaedScale — retrieval subagent (the cheap/fast leg of the multi-agent split).
+PaedScale — retrieval subagent (cheap/fast leg of the multi-agent split).
 
-A SEPARATE Anthropic loop on a cheaper model (default claude-sonnet-5) whose only job is to
-return a structured, CITED adult-PK + mechanism dossier for one drug. It uses real retrieval
-tools (PubMed E-utilities + openFDA, from retrieval_tools.py) plus web_search. The Opus
-orchestrator (agent.py) calls this via the `retrieve_drug_data` tool and does the judgment.
+Separate Anthropic loop on a cheaper model. Returns a structured, CITED adult-PK +
+mechanism dossier via PubMed + openFDA + optional web_fetch. Skills hold retrieval
+detail so this system prompt stays lean.
 
-Design:
-- cite-or-abstain: the subagent nulls any value it cannot source rather than inventing one.
-- lean + capped: few turns, small max_tokens, on a cheap model, to hold the <60s / <$1 budget.
-- graceful fallback: on any failure/timeout it returns a seed-derived dossier (from
-  constants.DRUG_SEED + mechanism_truth.json) tagged source_mode="seed_fallback", so the
-  dosing request degrades instead of crashing. "Force live everywhere" holds on the happy
-  path; seed is used ONLY when live retrieval genuinely fails.
-
-The identical retrieval tools are also exposed over MCP by mcp_server.py.
+On failure: null dossier (source_mode="unavailable") — never fabricate PK.
 """
 
 from __future__ import annotations
@@ -25,26 +16,20 @@ import os
 from anthropic import Anthropic
 
 from retrieval_tools import TOOL_FUNCS, TOOL_SCHEMAS, openfda_label
+from skills import load_skill, list_skills
 
 RETRIEVAL_MODEL = os.environ.get("RETRIEVAL_MODEL", "claude-sonnet-5")
 RETRIEVAL_MAX_TOKENS = int(os.environ.get("RETRIEVAL_MAX_TOKENS", "4000"))
 
-SYSTEM = """You are a pediatric pharmacokinetics RETRIEVAL specialist. For the given drug you
-find and CITE the adult PK and elimination mechanism, then call submit_dossier exactly once.
+SYSTEM = """You retrieve CITED adult PK + mechanism for one drug, then call submit_dossier once.
 
-TIGHT BUDGET (latency-critical): make AT MOST 3 retrieval tool calls total, then submit.
-Recommended path: (1) openfda_label once for label text / clinical pharmacology / safety, then
-(2) ONE pubmed_search + (3) ONE pubmed_fetch of the top 1-2 PMIDs only if a specific PK number
-(clearance, Vd, fm-split, protein binding) is still missing. Reserve web_search for a single
-named gap. Do NOT keep searching once you can fill the dossier — submit immediately.
+Budget: ≤3 retrieval tool calls, then submit. Prefer openFDA pre-fetch in the user message;
+fill gaps with pubmed (skill 'pubmed') or web_fetch (skill 'webfetch') for a specific URL.
+Load a skill with load_skill before using that method if you need the protocol.
 
-CITE-OR-ABSTAIN is absolute: every numeric value you report must be traceable to a source you
-retrieved. If you cannot source a value, set it to null — NEVER invent a number to look
-complete. Empty lists (no transporter / no active metabolite) are valid and expected.
-
-Report adult values for a standard 70 kg adult. fm must use engine pathway keys where they
-apply: renal_gfr, cyp3a4, ugt2b7 (map the drug's real enzymes onto these; if the true pathway
-has no engine key, still name the enzyme in `enzymes` and leave fm for that fraction out)."""
+Cite-or-abstain: null any number you cannot source. Empty lists OK.
+Adult values = 70 kg. fm keys: renal_gfr, cyp3a4, ugt2b7, cyp1a2, cyp2d6, cyp2c9, cyp2c19, ugt1a1
+(map real enzymes onto these; omit fm if no engine key)."""
 
 DOSSIER_TOOL = {
     "name": "submit_dossier",
@@ -78,17 +63,25 @@ DOSSIER_TOOL = {
     },
 }
 
+LOAD_SKILL_TOOL = {
+    "name": "load_skill",
+    "description": f"Load a lean skill protocol. Names: {', '.join(list_skills())}.",
+    "input_schema": {
+        "type": "object",
+        "properties": {"name": {"type": "string"}},
+        "required": ["name"],
+    },
+}
+
 TOOLS = [
     {"type": "web_search_20250305", "name": "web_search", "max_uses": 1},
     *TOOL_SCHEMAS,
+    LOAD_SKILL_TOOL,
     DOSSIER_TOOL,
 ]
 
 
 def _abstention(reason: str) -> dict:
-    """A null dossier — retrieval failed, so we ABSTAIN. There is deliberately NO seed
-    fallback: the agent must not dose off fabricated numbers. Everything is null so the
-    orchestrator grades D / declines a point estimate."""
     return {
         "cl_adult_l_h": None, "vd_adult_l": None, "fm": {}, "target_metric": "css",
         "typical_adult_dose_mg_per_day": None, "oral_bioavailability": None,
@@ -100,33 +93,24 @@ def _abstention(reason: str) -> dict:
 
 
 def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5) -> dict:
-    """Retrieve a cited PK+mechanism dossier for `drug`.
-
-    Latency/reliability design: the openFDA label is PRE-FETCHED deterministically and injected
-    into the first message (so the model can often submit on turn 1), and submit_dossier is
-    FORCED on the final turn (so budget exhaustion yields a real cited dossier, not a seed
-    fallback). Seed fallback is reserved for genuine exceptions (e.g. network/API down).
-
-    Returns {"dossier": {...}, "source_mode": "live"|"seed_fallback", "trace": [...],
-             "usage": {...}}. Never raises.
-    """
+    """Retrieve a cited PK+mechanism dossier. Returns live or unavailable; never raises."""
     trace: list[str] = []
     usage = {"input_tokens": 0, "output_tokens": 0, "model": RETRIEVAL_MODEL}
     try:
         client = Anthropic()
-        label = openfda_label(drug)  # deterministic pre-fetch — cuts a model turn
+        label = openfda_label(drug)
         hint = ""
         if label.get("found"):
             keep = {k: v for k, v in label.items() if k not in ("drug", "found")}
             hint = "\n\nopenFDA label (pre-fetched — use it, search only for gaps):\n" + \
                    json.dumps(keep)[:2500]
         user = (f"Drug: {drug}\nIndication: {indication or 'unspecified'}\n"
-                "Retrieve/confirm the adult PK + mechanism, then call submit_dossier." + hint)
+                "Retrieve/confirm adult PK + mechanism, then submit_dossier." + hint)
         messages = [{"role": "user", "content": user}]
 
         for i in range(max_turns):
             kwargs = {}
-            if i == max_turns - 1:  # final turn: force a structured dossier from what we have
+            if i == max_turns - 1:
                 kwargs["tool_choice"] = {"type": "tool", "name": "submit_dossier"}
             resp = client.messages.create(
                 model=RETRIEVAL_MODEL, max_tokens=RETRIEVAL_MAX_TOKENS,
@@ -144,8 +128,6 @@ def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5) -> di
                     tool_uses.append(block)
             messages.append({"role": "assistant", "content": resp.content})
 
-            # Return the dossier if the model submitted one — checked BEFORE the stop_reason
-            # break, because a large dossier can end with stop_reason="max_tokens", not "tool_use".
             for tu in tool_uses:
                 if tu.name == "submit_dossier" and tu.input:
                     return {"dossier": tu.input, "source_mode": "live",
@@ -156,18 +138,20 @@ def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5) -> di
 
             results = []
             for tu in tool_uses:
-                if tu.name in TOOL_FUNCS:
+                if tu.name == "load_skill":
+                    out = load_skill(tu.input.get("name", ""))
+                elif tu.name in TOOL_FUNCS:
                     try:
                         out = TOOL_FUNCS[tu.name](tu.input)
-                    except Exception as te:  # a bad tool call must not sink the whole retrieval
+                    except Exception as te:
                         out = {"error": f"{tu.name} failed: {te}"}
-                    results.append({"type": "tool_result", "tool_use_id": tu.id,
-                                    "content": json.dumps(out)})
-                # web_search is a server tool — handled by the API.
+                else:
+                    continue  # web_search is server-side
+                results.append({"type": "tool_result", "tool_use_id": tu.id,
+                                "content": json.dumps(out)})
             if results:
                 messages.append({"role": "user", "content": results})
 
-        # Should be unreachable (final turn forces submit); abstain if it truly didn't.
         return {"dossier": _abstention("no dossier submitted in budget"),
                 "source_mode": "unavailable",
                 "trace": trace + ["retrieval did not submit a dossier in budget"], "usage": usage}

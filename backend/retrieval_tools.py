@@ -101,18 +101,48 @@ def openfda_label(drug: str, max_field_chars: int = 1500) -> dict:
         return {"drug": drug, "found": False, "error": f"openfda_label failed: {e}"}
 
 
+def web_fetch(url: str, max_chars: int = 10000) -> dict:
+    """Fetch plain text from a URL (size-capped). For guidelines/labels when PMID/openFDA lack a number."""
+    url = (url or "").strip()
+    if not url.startswith(("http://", "https://")):
+        return {"url": url, "text": "", "error": "url must start with http:// or https://"}
+    try:
+        r = httpx.get(
+            url,
+            timeout=_TIMEOUT,
+            follow_redirects=True,
+            headers={"User-Agent": "PaedScale/0.2 (pediatric-dosing-research; educational)"},
+        )
+        r.raise_for_status()
+        ctype = (r.headers.get("content-type") or "").lower()
+        if "pdf" in ctype or url.lower().endswith(".pdf"):
+            return {"url": url, "text": "", "error": "PDF binary not extracted; use HTML or abstract sources"}
+        text = r.text.strip()
+        # strip coarse tags if HTML
+        if "html" in ctype or text[:200].lower().lstrip().startswith("<!doctype") or "<html" in text[:500].lower():
+            import re
+            text = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", text)
+            text = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", text)
+            text = re.sub(r"(?s)<[^>]+>", " ", text)
+            text = re.sub(r"\s+", " ", text).strip()
+        return {"url": url, "text": text[:max_chars], "truncated": len(text) > max_chars,
+                "status_code": r.status_code}
+    except Exception as e:
+        return {"url": url, "text": "", "error": f"web_fetch failed: {e}"}
+
+
 # Registry so retrieval.py and mcp_server.py wrap the exact same callables.
 TOOL_FUNCS = {
     "pubmed_search": lambda a: pubmed_search(a["query"], a.get("retmax", 5)),
     "pubmed_fetch": lambda a: pubmed_fetch(a["pmids"], a.get("max_chars", 3500)),
     "openfda_label": lambda a: openfda_label(a["drug"], a.get("max_field_chars", 1500)),
+    "web_fetch": lambda a: web_fetch(a["url"], a.get("max_chars", 10000)),
 }
 
 TOOL_SCHEMAS = [
     {
         "name": "pubmed_search",
-        "description": "Search PubMed for a query; returns the most relevant PMIDs. Use to find "
-                       "primary literature for adult PK (clearance, Vd, fm-split, protein binding).",
+        "description": "Search PubMed; returns PMIDs. Load skill 'pubmed' first if unsure how to query.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -133,12 +163,23 @@ TOOL_SCHEMAS = [
     },
     {
         "name": "openfda_label",
-        "description": "Fetch key sections (indications, dosing, clinical pharmacology, warnings) "
-                       "of the FDA drug label. Reliable for label TEXT and safety, not structured PK.",
+        "description": "FDA label text (dosing/safety). Load skill 'openfda' if unsure. Not structured PK.",
         "input_schema": {
             "type": "object",
             "properties": {"drug": {"type": "string"}},
             "required": ["drug"],
+        },
+    },
+    {
+        "name": "web_fetch",
+        "description": "Fetch text from a specific URL. Load skill 'webfetch' first. Size-capped.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string"},
+                "max_chars": {"type": "integer", "default": 10000},
+            },
+            "required": ["url"],
         },
     },
 ]

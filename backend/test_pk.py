@@ -88,6 +88,33 @@ def test_new_pathways_accepted():
     print(f"  new pathways accepted: cyp1a2/2d6/2c9/2c19, ugt1a1  OK")
 
 
+def test_edge_cases():
+    from edge_cases import assess_edge_cases
+    # prodrug
+    r = assess_edge_cases({"drug": "codeine", "age_years": 6, "weight_kg": 20}, {})
+    assert any("PRODRUG" in f for f in r["flags"]), r
+    # obesity
+    r2 = assess_edge_cases({"drug": "midazolam", "age_years": 1.0, "weight_kg": 14}, {})
+    assert any("OBESITY" in f for f in r2["flags"]), r2
+    assert "dosing_weight_kg_hint" in r2["adjustments"]
+    # high PB + neonate
+    r3 = assess_edge_cases(
+        {"drug": "midazolam", "age_years": 0.05, "weight_kg": 3.5},
+        {"protein_binding_percent": 97},
+    )
+    assert any("PROTEIN BINDING" in f for f in r3["flags"]), r3
+    # renal
+    r4 = assess_edge_cases(
+        {"drug": "vanco", "age_years": 6, "weight_kg": 20, "renal_impairment": True}, {}
+    )
+    assert any("RENAL" in f for f in r4["flags"]), r4
+    # no false positive on lean child
+    r5 = assess_edge_cases({"drug": "vancomycin", "age_years": 6, "weight_kg": 20},
+                           {"protein_binding_percent": 50})
+    assert not any("OBESITY" in f for f in r5["flags"])
+    print("  edge_cases: prodrug/obesity/PB/renal  OK")
+
+
 def test_oral_bioavailability():
     """Oral route must inflate the administered dose by 1/F vs the IV-equivalent."""
     s = DRUG_SEED["ampicillin"]  # F ~ 0.40
@@ -196,6 +223,7 @@ if __name__ == "__main__":
     test_neonate_clears_below_linear()
     test_refuses_unknown_pathway()
     test_new_pathways_accepted()
+    test_edge_cases()
     test_oral_bioavailability()
     test_time_mic_flag()
     test_safety_bounds_fire()

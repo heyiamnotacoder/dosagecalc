@@ -9,7 +9,8 @@ engineering source of truth. `AGENT.md` holds the short version and routes here.
 
 ## RULES:
 If you want to check browser use browser harness first. if allow external debugging is not enabled ask user to do it. It is more token efficient.
-If browser harness cant solve the problem and you must have to use browser then use claude in chrome
+If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
+read handoff saved at /private/tmp/
 
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that

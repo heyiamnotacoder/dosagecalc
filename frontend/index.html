@@ -719,13 +719,17 @@ function esc(s){ return (s||"").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">"
 /* turn a raw backend step into a cutesy, human-readable console line + stage move */
 function handleStep(text){
   const drugName = (DRUGS[currentCase.drug]||{}).name || currentCase.drug;
-  if(text.startsWith("→ retrieve_drug_data") || text.startsWith("→ demo pack hit")){
+  if(text.startsWith("→ demo pack hit")){
+    // demo mode: curated offline PK, no live retrieval
     advanceTo("retrieve");
-    if(text.includes("demo pack") || text.includes("skipped live")){
-      pushLine(`<span class="arrow">⚗ demo pack</span> — curated PK for <b>${esc(drugName)}</b> (no live retrieval)…`);
-    } else {
-      pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);
-    }
+    pushLine(`<span class="arrow">⚗ demo pack</span> — curated PK for <b>${esc(drugName)}</b> (no live retrieval)…`);
+  } else if(text.startsWith("→ live retrieval")){
+    // live mode: the retrieval subagent actually hits PubMed + openFDA
+    advanceTo("retrieve");
+    pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);
+  } else if(text.startsWith("→ retrieve_drug_data")){
+    // neutral pre-fetch step: advance the stage only; the mode-specific line follows
+    advanceTo("retrieve");
   } else if(text.startsWith("→ compute_pediatric_dose")){
     advanceTo("compute");
     pushLine(`<span class="arrow">∫ engine</span> — scaling adult PK by allometry × maturation…`);

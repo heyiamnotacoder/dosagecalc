@@ -65,29 +65,65 @@
         "obese_1y_14kg": 150
       },
       "source": "BNFc \u03b2-lactam / NNF",
-      "tdm_required": false
+      "tdm_required": false,
+      "indications": {
+        "meningitis": {
+          "match": ["meningitis", "gbs meningitis", "cns"],
+          "indication": "GBS / listeria meningitis (high-dose)",
+          "scenario_doses_mg_per_kg_per_day": {
+            "neonate_5d": 300,
+            "child_2y_egfr85": 300,
+            "obese_1y_14kg": 300
+          },
+          "source": "BNFc / NNF meningitis high-dose"
+        }
+      }
     },
     "meropenem": {
       "route": "iv",
-      "indication": "serious gram-negative / meningitis",
+      "indication": "serious gram-negative infection",
       "scenario_doses_mg_per_kg_per_day": {
         "neonate_5d": 60,
         "child_2y_egfr85": 60,
         "obese_1y_14kg": 60
       },
-      "source": "BNFc / NeoFax-style; meningitis higher",
-      "tdm_required": false
+      "source": "BNFc / NeoFax-style (standard indication)",
+      "tdm_required": false,
+      "indications": {
+        "meningitis": {
+          "match": ["meningitis", "cns", "ventriculitis"],
+          "indication": "meningitis / CNS (high-dose)",
+          "scenario_doses_mg_per_kg_per_day": {
+            "neonate_5d": 120,
+            "child_2y_egfr85": 120,
+            "obese_1y_14kg": 120
+          },
+          "source": "BNFc / NeoFax-style; meningitis doubles the dose"
+        }
+      }
     },
     "cefotaxime": {
       "route": "iv",
-      "indication": "neonatal sepsis / meningitis",
+      "indication": "neonatal sepsis",
       "scenario_doses_mg_per_kg_per_day": {
         "neonate_5d": 100,
         "child_2y_egfr85": 150,
         "obese_1y_14kg": 150
       },
       "source": "BNFc / NNF sepsis",
-      "tdm_required": false
+      "tdm_required": false,
+      "indications": {
+        "meningitis": {
+          "match": ["meningitis", "cns"],
+          "indication": "meningitis (high-dose)",
+          "scenario_doses_mg_per_kg_per_day": {
+            "neonate_5d": 200,
+            "child_2y_egfr85": 200,
+            "obese_1y_14kg": 200
+          },
+          "source": "BNFc / NNF meningitis high-dose"
+        }
+      }
     },
     "acyclovir": {
       "route": "iv",
@@ -98,7 +134,29 @@
         "obese_1y_14kg": 30
       },
       "source": "neonatal HSV high-dose; child HSV lower",
-      "tdm_required": false
+      "tdm_required": false,
+      "indications": {
+        "encephalitis": {
+          "match": ["encephalitis", "hsv encephalitis", "hse", "cns"],
+          "indication": "HSV encephalitis (high-dose IV)",
+          "scenario_doses_mg_per_kg_per_day": {
+            "neonate_5d": 60,
+            "child_2y_egfr85": 45,
+            "obese_1y_14kg": 45
+          },
+          "source": "HSV encephalitis 20 mg/kg q8h"
+        },
+        "varicella": {
+          "match": ["varicella", "vzv", "chickenpox", "zoster"],
+          "indication": "VZV / varicella\u2013zoster",
+          "scenario_doses_mg_per_kg_per_day": {
+            "neonate_5d": 30,
+            "child_2y_egfr85": 30,
+            "obese_1y_14kg": 30
+          },
+          "source": "VZV lower than HSV encephalitis"
+        }
+      }
     },
     "levetiracetam": {
       "route": "iv",

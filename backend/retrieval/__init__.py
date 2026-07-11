@@ -101,12 +101,16 @@ def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5,
     usage = {"input_tokens": 0, "output_tokens": 0, "model": RETRIEVAL_MODEL, "cache_hit": False}
 
     # Demo pack (branch `demo` only): curated JSON — skip live retrieval entirely.
-    demo = demo_lookup(drug)
+    demo = demo_lookup(drug, indication)
     if demo is not None:
+        resolved = (demo["dossier"] or {}).get("indication_resolved")
+        head = f"demo pack hit for {drug!r} — skipped live PubMed/openFDA"
+        if resolved:
+            head += f" (indication variant: {resolved})"
         payload = {
             "dossier": demo["dossier"],
             "source_mode": "demo",
-            "trace": [f"demo pack hit for {drug!r} — skipped live PubMed/openFDA"],
+            "trace": [head],
             "usage": usage,
         }
         if demo.get("guideline"):

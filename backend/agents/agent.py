@@ -45,6 +45,10 @@ Pipeline (lean):
 4. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
 5. Concordance 0.67×–1.5× vs guideline (demo-attached or web_search). None → grade B.
 6. Grade A/B/C/D; flag NTI→TDM, metabolites, oral-F, assumed-term, exposure-matching PD assumption.
+   If the retrieved dossier carries an `engine_limitation` object, the linear allometry×maturation
+   engine is the WRONG model for this drug: you MUST (a) add a prominent flag quoting its
+   `explanation`, and (b) cap `grade` at its `grade_ceiling` (never grade above it). Present the
+   computed dose as directional only — this is a deliberate "where the model fails and why" case.
 7. submit_recommendation once, last. Lean reasoning. Flag toxic/sub-therapeutic doses."""
 
 TOOLS = [
@@ -358,13 +362,19 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
             if tu.name == "retrieve_drug_data":
                 drug_name = tu.input.get("drug")
                 if on_step:
-                    on_step(f"→ retrieve_drug_data({drug_name}) — demo pack or live PubMed/openFDA …")
+                    # Neutral pre-fetch step: only advances the stage. The mode is unknown
+                    # until fetch returns, so do NOT imply demo/live here.
+                    on_step(f"→ retrieve_drug_data({drug_name}) …")
                 rout = retrieval.fetch(tu.input["drug"], tu.input.get("indication"))
                 retr_in += rout["usage"].get("input_tokens", 0)
                 retr_out += rout["usage"].get("output_tokens", 0)
                 mode = rout["source_mode"]
-                if on_step and mode == "demo":
-                    on_step(f"→ demo pack hit for {drug_name} — skipped live retrieval")
+                if on_step:
+                    # Exactly one mode-specific step, so the console tells the truth.
+                    if mode == "demo":
+                        on_step(f"→ demo pack hit for {drug_name} — skipped live retrieval")
+                    else:
+                        on_step(f"→ live retrieval for {drug_name} — PubMed/openFDA …")
                 payload = {
                     "source_mode": mode,
                     "dossier": rout["dossier"],

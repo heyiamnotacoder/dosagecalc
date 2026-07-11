@@ -214,6 +214,18 @@
       "route_default": "iv",
       "indication_default": "HSV / VZV (neonatal HSV)",
       "notes": "renal clearance; hydrate",
+      "indications": {
+        "encephalitis": {
+          "match": ["encephalitis", "hsv encephalitis", "hse", "cns"],
+          "indication_default": "HSV encephalitis (high-dose IV)",
+          "notes": "HSV encephalitis: high-dose IV (20 mg/kg q8h); renal clearance; hydrate"
+        },
+        "varicella": {
+          "match": ["varicella", "vzv", "chickenpox", "zoster"],
+          "indication_default": "VZV / varicella–zoster",
+          "notes": "VZV/varicella: lower than HSV encephalitis; renal clearance; hydrate"
+        }
+      },
       "citations": [
         {
           "claim": "Curated adult PK for demo (acyclovir): CL=20.0 L/h, Vd=48.0 L, fm={'renal_gfr': 0.8}",
@@ -270,6 +282,11 @@
       "route_default": "iv",
       "indication_default": "candida / prophylaxis",
       "notes": "mostly renal unchanged",
+      "engine_limitation": {
+        "kind": "supra_allometric_clearance",
+        "grade_ceiling": "C",
+        "explanation": "Fluconazole weight-normalised clearance in infants and children EXCEEDS adult allometric scaling (children eliminate it faster per kg than WT^0.75 predicts). The linear allometry×maturation engine therefore UNDER-doses pediatric patients here. Treat the computed dose as directional only — pediatric guidelines use higher mg/kg than this extrapolation."
+      },
       "citations": [
         {
           "claim": "Curated adult PK for demo (fluconazole): CL=1.2 L/h, Vd=45.0 L, fm={'renal_gfr': 0.8}",
@@ -491,6 +508,11 @@
       "route_default": "iv",
       "indication_default": "seizures",
       "notes": "nonlinear PK; high PB; TDM",
+      "engine_limitation": {
+        "kind": "nonlinear_michaelis_menten",
+        "grade_ceiling": "C",
+        "explanation": "Phenytoin follows saturable Michaelis–Menten (zero-order-approaching) elimination, not first-order clearance. The linear allometry×maturation engine assumes CL is dose-independent, so its steady-state prediction OVER-predicts exposure as dose rises — a real over-dose risk for this narrow-TI drug. The computed value is directional only; dose to TDM."
+      },
       "citations": [
         {
           "claim": "Curated adult PK for demo (phenytoin): CL=2.5 L/h, Vd=45.0 L, fm={'cyp2c9': 0.8}",

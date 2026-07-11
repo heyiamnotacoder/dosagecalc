@@ -391,8 +391,8 @@
     <!-- coverage -->
     <div class="section" id="drugs">
       <h2>Drug coverage</h2>
-      <p class="sub">Eight curated <strong>demo</strong> drugs (best performers from validation).
-        Offline PK pack — when selected, live PubMed/openFDA retrieval is skipped.</p>
+      <p class="sub">All <strong>20</strong> demo drugs with offline PK + guidelines.
+        When selected, live PubMed/openFDA retrieval is skipped.</p>
       <div class="drug-grid" id="drug-grid"></div>
     </div>
 
@@ -410,20 +410,34 @@
     <form class="calc-card" id="form">
       <div class="kicker">New case</div>
       <h2>Dose a child</h2>
-      <p class="intro">Demo pack: curated PK for these drugs (no live retrieval). Orchestrator still grades and justifies.</p>
+      <p class="intro">Demo pack: curated PK + guidelines for all 20 drugs (no live retrieval). Orchestrator still grades and justifies.</p>
 
       <div class="field">
         <label for="drug">Drug</label>
         <select id="drug">
-          <optgroup label="Demo pack — validation best">
+          <optgroup label="Renal">
+            <option value="vancomycin">Vancomycin — renal · AUC, NTI→TDM</option>
+            <option value="gentamicin">Gentamicin — renal · Cmax/MIC, NTI→TDM</option>
+            <option value="amikacin">Amikacin — renal · Cmax/MIC, NTI→TDM</option>
+            <option value="ampicillin">Ampicillin — renal · time&gt;MIC</option>
+            <option value="meropenem">Meropenem — renal · time&gt;MIC</option>
+            <option value="cefotaxime">Cefotaxime — renal · time&gt;MIC</option>
+            <option value="acyclovir">Acyclovir — renal · css</option>
+            <option value="levetiracetam">Levetiracetam — renal · css</option>
+            <option value="fluconazole">Fluconazole — renal · css</option>
+          </optgroup>
+          <optgroup label="Hepatic / mixed">
+            <option value="midazolam">Midazolam — CYP3A4 · sedation</option>
+            <option value="fentanyl">Fentanyl — CYP3A4 · potent</option>
             <option value="clindamycin">Clindamycin — CYP3A4 · css</option>
-            <option value="amikacin">Amikacin — renal / GFR · Cmax/MIC, NTI→TDM</option>
-            <option value="phenobarbital">Phenobarbital — CYP2C19/2C9 · TDM</option>
-            <option value="vancomycin">Vancomycin — renal / GFR · AUC, NTI→TDM</option>
-            <option value="levetiracetam">Levetiracetam — renal / GFR · css</option>
+            <option value="morphine">Morphine — UGT2B7 · M6G</option>
+            <option value="caffeine">Caffeine — CYP1A2 · AOP</option>
+            <option value="theophylline">Theophylline — CYP1A2 · NTI</option>
+            <option value="phenytoin">Phenytoin — CYP2C9 · MM / TDM</option>
             <option value="ibuprofen">Ibuprofen — CYP2C9 · high PB</option>
-            <option value="metronidazole">Metronidazole — mixed hepatic · metabolite</option>
-            <option value="gentamicin">Gentamicin — renal / GFR · Cmax/MIC, NTI→TDM</option>
+            <option value="phenobarbital">Phenobarbital — CYP2C19/2C9 · TDM</option>
+            <option value="metronidazole">Metronidazole — mixed CYP · metabolite</option>
+            <option value="ondansetron">Ondansetron — multi-CYP · css</option>
           </optgroup>
         </select>
       </div>
@@ -590,14 +604,26 @@ const $ = id => document.getElementById(id);
 
 /* ---------------- drug catalogue (for landing + display names) ---------------- */
 const DRUGS = {
-  clindamycin:{name:"Clindamycin",path:"CYP3A4 · Css",edge:"Best strict concordance; hepatic CYP3A4"},
-  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"3/3 strict; NTI → TDM"},
-  phenobarbital:{name:"Phenobarbital",path:"CYP2C19/2C9 · Css",edge:"3/3 strict; long half-life · TDM"},
-  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"Classic NTI → recommend TDM"},
-  levetiracetam:{name:"Levetiracetam",path:"renal / GFR · Css",edge:"Grade A case; mostly renal unchanged"},
-  ibuprofen:{name:"Ibuprofen",path:"CYP2C9 · Css",edge:"Very high protein binding"},
-  metronidazole:{name:"Metronidazole",path:"CYP2C9/3A4 · Css",edge:"Active hydroxy metabolite"},
+  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"NTI → TDM"},
   gentamicin:{name:"Gentamicin",path:"renal / GFR · Cmax/MIC",edge:"NTI → TDM; extend interval in the young"},
+  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"Cmax/MIC aminoglycoside; TDM"},
+  ampicillin:{name:"Ampicillin",path:"renal / GFR · time>MIC",edge:"Daily-dose match is a proxy for fT>MIC"},
+  meropenem:{name:"Meropenem",path:"renal / GFR · time>MIC",edge:"time>MIC proxy; meningitis higher"},
+  cefotaxime:{name:"Cefotaxime",path:"renal / GFR · time>MIC",edge:"time>MIC proxy"},
+  acyclovir:{name:"Acyclovir",path:"renal / GFR · Css",edge:"Indication- and age-band sensitive"},
+  levetiracetam:{name:"Levetiracetam",path:"renal / GFR · Css",edge:"Mostly renal unchanged"},
+  fluconazole:{name:"Fluconazole",path:"renal / GFR · Css",edge:"Pediatric CL may exceed adult allometry"},
+  midazolam:{name:"Midazolam",path:"CYP3A4 · Css",edge:"High oral first-pass; titrate to sedation"},
+  fentanyl:{name:"Fentanyl",path:"CYP3A4 · Css",edge:"Extreme potency (mcg dosing)"},
+  clindamycin:{name:"Clindamycin",path:"CYP3A4 · Css",edge:"Hepatic CYP3A4 antibiotic"},
+  morphine:{name:"Morphine",path:"UGT2B7 · Css",edge:"Active renally-cleared metabolite (M6G)"},
+  caffeine:{name:"Caffeine",path:"CYP1A2 · Css",edge:"AOP indication; off-label outside neonate"},
+  theophylline:{name:"Theophylline",path:"CYP1A2 · Css",edge:"Historical NTI; TDM"},
+  phenytoin:{name:"Phenytoin",path:"CYP2C9 · Css",edge:"Michaelis–Menten — no linear CL invent"},
+  ibuprofen:{name:"Ibuprofen",path:"CYP2C9 · Css",edge:"Very high protein binding"},
+  phenobarbital:{name:"Phenobarbital",path:"CYP2C19/2C9 · Css",edge:"Long half-life; TDM"},
+  metronidazole:{name:"Metronidazole",path:"CYP2C9/3A4 · Css",edge:"Active hydroxy metabolite"},
+  ondansetron:{name:"Ondansetron",path:"multi-CYP · Css",edge:"Multi-enzyme hepatic clearance"},
 };
 (function fillDrugs(){
   $("drug-grid").innerHTML = Object.values(DRUGS).map(d=>

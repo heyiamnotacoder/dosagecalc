@@ -1,17 +1,349 @@
 {
-  "_comment": "DEMO BRANCH ONLY. Curated adult PK dossiers for offline demos. When a drug is listed here, retrieve_drug_data serves this JSON (source_mode=demo) and skips live PubMed/openFDA. Never merge demo \u2192 master.",
-  "_selection": "Top performers from validation-eval (strict band + grades + pathway diversity).",
+  "_comment": "DEMO BRANCH ONLY. Full 20-drug curated adult PK dossiers for offline demos. When a drug is listed here, retrieve_drug_data serves this JSON (source_mode=demo) and skips live PubMed/openFDA. Never merge demo \u2192 master.",
+  "_selection": "All 20 drugs from the validation harness (validation_set/drug_data.json), re-homed for demo.",
   "_drugs": [
-    "clindamycin",
-    "amikacin",
-    "phenobarbital",
     "vancomycin",
+    "gentamicin",
+    "amikacin",
+    "ampicillin",
+    "meropenem",
+    "cefotaxime",
+    "acyclovir",
     "levetiracetam",
+    "fluconazole",
+    "midazolam",
+    "fentanyl",
+    "clindamycin",
+    "morphine",
+    "caffeine",
+    "theophylline",
+    "phenytoin",
     "ibuprofen",
+    "phenobarbital",
     "metronidazole",
-    "gentamicin"
+    "ondansetron"
   ],
   "drugs": {
+    "vancomycin": {
+      "cl_adult_l_h": 4.2,
+      "vd_adult_l": 49.0,
+      "fm": {
+        "renal_gfr": 0.9
+      },
+      "target_metric": "auc",
+      "typical_adult_dose_mg_per_day": 2000,
+      "oral_bioavailability": 0.0,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 50,
+      "toxic_dose_mg_per_kg_per_day": 80,
+      "effective_dose_mg_per_kg_per_day": 30,
+      "narrow_therapeutic_index": true,
+      "route_default": "iv",
+      "indication_default": "serious gram-positive infection",
+      "notes": "NTI \u2192 TDM",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (vancomycin): CL=4.2 L/h, Vd=49.0 L, fm={'renal_gfr': 0.9}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "gentamicin": {
+      "cl_adult_l_h": 5.4,
+      "vd_adult_l": 18.0,
+      "fm": {
+        "renal_gfr": 0.95
+      },
+      "target_metric": "cmax",
+      "typical_adult_dose_mg_per_day": 350,
+      "oral_bioavailability": 0.0,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 10,
+      "toxic_dose_mg_per_kg_per_day": 12,
+      "effective_dose_mg_per_kg_per_day": 4,
+      "narrow_therapeutic_index": true,
+      "route_default": "iv",
+      "indication_default": "gram-negative infection",
+      "notes": "Cmax/MIC; TDM",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (gentamicin): CL=5.4 L/h, Vd=18.0 L, fm={'renal_gfr': 0.95}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "amikacin": {
+      "cl_adult_l_h": 5.4,
+      "vd_adult_l": 18.0,
+      "fm": {
+        "renal_gfr": 0.95
+      },
+      "target_metric": "cmax",
+      "typical_adult_dose_mg_per_day": 1050,
+      "oral_bioavailability": 0.0,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 10,
+      "toxic_dose_mg_per_kg_per_day": 30,
+      "effective_dose_mg_per_kg_per_day": 15,
+      "narrow_therapeutic_index": true,
+      "route_default": "iv",
+      "indication_default": "resistant gram-negative infection",
+      "notes": "Cmax/MIC; TDM",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (amikacin): CL=5.4 L/h, Vd=18.0 L, fm={'renal_gfr': 0.95}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "ampicillin": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 21.0,
+      "fm": {
+        "renal_gfr": 0.9
+      },
+      "target_metric": "time_mic",
+      "typical_adult_dose_mg_per_day": 8000,
+      "oral_bioavailability": 0.4,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 18,
+      "toxic_dose_mg_per_kg_per_day": 400,
+      "effective_dose_mg_per_kg_per_day": 25,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "neonatal sepsis / listeria",
+      "notes": "time>MIC proxy",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (ampicillin): CL=15.0 L/h, Vd=21.0 L, fm={'renal_gfr': 0.9}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "meropenem": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 21.0,
+      "fm": {
+        "renal_gfr": 0.7
+      },
+      "target_metric": "time_mic",
+      "typical_adult_dose_mg_per_day": 3000,
+      "oral_bioavailability": 0.0,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 2,
+      "toxic_dose_mg_per_kg_per_day": 120,
+      "effective_dose_mg_per_kg_per_day": 30,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "serious gram-negative / meningitis",
+      "notes": "time>MIC \u03b2-lactam",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (meropenem): CL=15.0 L/h, Vd=21.0 L, fm={'renal_gfr': 0.7}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "cefotaxime": {
+      "cl_adult_l_h": 18.0,
+      "vd_adult_l": 25.0,
+      "fm": {
+        "renal_gfr": 0.6
+      },
+      "target_metric": "time_mic",
+      "typical_adult_dose_mg_per_day": 6000,
+      "oral_bioavailability": 0.0,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [
+        "desacetyl-cefotaxime"
+      ],
+      "protein_binding_percent": 35,
+      "toxic_dose_mg_per_kg_per_day": 300,
+      "effective_dose_mg_per_kg_per_day": 50,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "neonatal sepsis / meningitis",
+      "notes": "active metabolite minor",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (cefotaxime): CL=18.0 L/h, Vd=25.0 L, fm={'renal_gfr': 0.6}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "acyclovir": {
+      "cl_adult_l_h": 20.0,
+      "vd_adult_l": 48.0,
+      "fm": {
+        "renal_gfr": 0.8
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 3000,
+      "oral_bioavailability": 0.2,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 15,
+      "toxic_dose_mg_per_kg_per_day": 60,
+      "effective_dose_mg_per_kg_per_day": 15,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "HSV / VZV (neonatal HSV)",
+      "notes": "renal clearance; hydrate",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (acyclovir): CL=20.0 L/h, Vd=48.0 L, fm={'renal_gfr': 0.8}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "levetiracetam": {
+      "cl_adult_l_h": 2.6,
+      "vd_adult_l": 50.0,
+      "fm": {
+        "renal_gfr": 0.66
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 2000,
+      "oral_bioavailability": 1.0,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 0,
+      "toxic_dose_mg_per_kg_per_day": 100,
+      "effective_dose_mg_per_kg_per_day": 20,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "seizures",
+      "notes": "mostly renal unchanged",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (levetiracetam): CL=2.6 L/h, Vd=50.0 L, fm={'renal_gfr': 0.66}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "fluconazole": {
+      "cl_adult_l_h": 1.2,
+      "vd_adult_l": 45.0,
+      "fm": {
+        "renal_gfr": 0.8
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 200,
+      "oral_bioavailability": 0.9,
+      "elimination": "renal",
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 11,
+      "toxic_dose_mg_per_kg_per_day": 20,
+      "effective_dose_mg_per_kg_per_day": 3,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "candida / prophylaxis",
+      "notes": "mostly renal unchanged",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (fluconazole): CL=1.2 L/h, Vd=45.0 L, fm={'renal_gfr': 0.8}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "midazolam": {
+      "cl_adult_l_h": 24.0,
+      "vd_adult_l": 70.0,
+      "fm": {
+        "cyp3a4": 0.95
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 10,
+      "oral_bioavailability": 0.4,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP3A4"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [
+        "1-OH-midazolam"
+      ],
+      "protein_binding_percent": 97,
+      "toxic_dose_mg_per_kg_per_day": 6,
+      "effective_dose_mg_per_kg_per_day": 0.5,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "sedation",
+      "notes": "high PB; first-pass oral",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (midazolam): CL=24.0 L/h, Vd=70.0 L, fm={'cyp3a4': 0.95}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "fentanyl": {
+      "cl_adult_l_h": 50.0,
+      "vd_adult_l": 280.0,
+      "fm": {
+        "cyp3a4": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 1.0,
+      "oral_bioavailability": 0.33,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP3A4"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [],
+      "protein_binding_percent": 84,
+      "toxic_dose_mg_per_kg_per_day": 0.2,
+      "effective_dose_mg_per_kg_per_day": 0.01,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "analgesia/sedation",
+      "notes": "mcg dosing; potent",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (fentanyl): CL=50.0 L/h, Vd=280.0 L, fm={'cyp3a4': 0.9}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
     "clindamycin": {
       "cl_adult_l_h": 15.0,
       "vd_adult_l": 60.0,
@@ -37,38 +369,165 @@
       "citations": [
         {
           "claim": "Curated adult PK for demo (clindamycin): CL=15.0 L/h, Vd=60.0 L, fm={'cyp3a4': 0.9}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
         }
       ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
     },
-    "amikacin": {
-      "cl_adult_l_h": 5.4,
-      "vd_adult_l": 18.0,
+    "morphine": {
+      "cl_adult_l_h": 90.0,
+      "vd_adult_l": 230.0,
       "fm": {
-        "renal_gfr": 0.95
+        "ugt2b7": 0.7
       },
-      "target_metric": "cmax",
-      "typical_adult_dose_mg_per_day": 1050,
-      "oral_bioavailability": 0.0,
-      "elimination": "renal",
-      "enzymes": [],
-      "transporters": [],
-      "active_metabolites": [],
-      "protein_binding_percent": 10,
-      "toxic_dose_mg_per_kg_per_day": 30,
-      "effective_dose_mg_per_kg_per_day": 15,
-      "narrow_therapeutic_index": true,
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 30,
+      "oral_bioavailability": 0.25,
+      "elimination": "hepatic",
+      "enzymes": [
+        "UGT2B7"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [
+        "M6G",
+        "M3G"
+      ],
+      "protein_binding_percent": 35,
+      "toxic_dose_mg_per_kg_per_day": 2,
+      "effective_dose_mg_per_kg_per_day": 0.1,
+      "narrow_therapeutic_index": false,
       "route_default": "iv",
-      "indication_default": "resistant gram-negative infection",
-      "notes": "Cmax/MIC; TDM",
+      "indication_default": "analgesia",
+      "notes": "M6G renally cleared",
       "citations": [
         {
-          "claim": "Curated adult PK for demo (amikacin): CL=5.4 L/h, Vd=18.0 L, fm={'renal_gfr': 0.95}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
+          "claim": "Curated adult PK for demo (morphine): CL=90.0 L/h, Vd=230.0 L, fm={'ugt2b7': 0.7}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
         }
       ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "caffeine": {
+      "cl_adult_l_h": 6.0,
+      "vd_adult_l": 45.0,
+      "fm": {
+        "cyp1a2": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 200,
+      "oral_bioavailability": 1.0,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP1A2"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 35,
+      "toxic_dose_mg_per_kg_per_day": 20,
+      "effective_dose_mg_per_kg_per_day": 2.5,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "apnea of prematurity (caffeine citrate)",
+      "notes": "neonatal AOP standard",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (caffeine): CL=6.0 L/h, Vd=45.0 L, fm={'cyp1a2': 0.9}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "theophylline": {
+      "cl_adult_l_h": 3.0,
+      "vd_adult_l": 35.0,
+      "fm": {
+        "cyp1a2": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 600,
+      "oral_bioavailability": 0.96,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP1A2"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 40,
+      "toxic_dose_mg_per_kg_per_day": 24,
+      "effective_dose_mg_per_kg_per_day": 10,
+      "narrow_therapeutic_index": true,
+      "route_default": "iv",
+      "indication_default": "apnea / bronchospasm (historical)",
+      "notes": "NTI; TDM",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (theophylline): CL=3.0 L/h, Vd=35.0 L, fm={'cyp1a2': 0.9}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "phenytoin": {
+      "cl_adult_l_h": 2.5,
+      "vd_adult_l": 45.0,
+      "fm": {
+        "cyp2c9": 0.8
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 400,
+      "oral_bioavailability": 0.9,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP2C9"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 90,
+      "toxic_dose_mg_per_kg_per_day": 20,
+      "effective_dose_mg_per_kg_per_day": 4,
+      "narrow_therapeutic_index": true,
+      "route_default": "iv",
+      "indication_default": "seizures",
+      "notes": "nonlinear PK; high PB; TDM",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (phenytoin): CL=2.5 L/h, Vd=45.0 L, fm={'cyp2c9': 0.8}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
+    },
+    "ibuprofen": {
+      "cl_adult_l_h": 3.5,
+      "vd_adult_l": 10.0,
+      "fm": {
+        "cyp2c9": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 1200,
+      "oral_bioavailability": 0.8,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP2C9"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 99,
+      "toxic_dose_mg_per_kg_per_day": 40,
+      "effective_dose_mg_per_kg_per_day": 5,
+      "narrow_therapeutic_index": false,
+      "route_default": "iv",
+      "indication_default": "PDA closure / analgesia",
+      "notes": "very high PB; neonate PDA use",
+      "citations": [
+        {
+          "claim": "Curated adult PK for demo (ibuprofen): CL=3.5 L/h, Vd=10.0 L, fm={'cyp2c9': 0.9}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
+        }
+      ],
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
     },
     "phenobarbital": {
       "cl_adult_l_h": 0.3,
@@ -97,96 +556,10 @@
       "citations": [
         {
           "claim": "Curated adult PK for demo (phenobarbital): CL=0.3 L/h, Vd=40.0 L, fm={'cyp2c19': 0.5, 'cyp2c9': 0.2}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
         }
       ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
-    },
-    "vancomycin": {
-      "cl_adult_l_h": 4.2,
-      "vd_adult_l": 49.0,
-      "fm": {
-        "renal_gfr": 0.9
-      },
-      "target_metric": "auc",
-      "typical_adult_dose_mg_per_day": 2000,
-      "oral_bioavailability": 0.0,
-      "elimination": "renal",
-      "enzymes": [],
-      "transporters": [],
-      "active_metabolites": [],
-      "protein_binding_percent": 50,
-      "toxic_dose_mg_per_kg_per_day": 80,
-      "effective_dose_mg_per_kg_per_day": 30,
-      "narrow_therapeutic_index": true,
-      "route_default": "iv",
-      "indication_default": "serious gram-positive infection",
-      "notes": "NTI \u2192 TDM",
-      "citations": [
-        {
-          "claim": "Curated adult PK for demo (vancomycin): CL=4.2 L/h, Vd=49.0 L, fm={'renal_gfr': 0.9}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
-        }
-      ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
-    },
-    "levetiracetam": {
-      "cl_adult_l_h": 2.6,
-      "vd_adult_l": 50.0,
-      "fm": {
-        "renal_gfr": 0.66
-      },
-      "target_metric": "css",
-      "typical_adult_dose_mg_per_day": 2000,
-      "oral_bioavailability": 1.0,
-      "elimination": "renal",
-      "enzymes": [],
-      "transporters": [],
-      "active_metabolites": [],
-      "protein_binding_percent": 0,
-      "toxic_dose_mg_per_kg_per_day": 100,
-      "effective_dose_mg_per_kg_per_day": 20,
-      "narrow_therapeutic_index": false,
-      "route_default": "iv",
-      "indication_default": "seizures",
-      "notes": "mostly renal unchanged",
-      "citations": [
-        {
-          "claim": "Curated adult PK for demo (levetiracetam): CL=2.6 L/h, Vd=50.0 L, fm={'renal_gfr': 0.66}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
-        }
-      ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
-    },
-    "ibuprofen": {
-      "cl_adult_l_h": 3.5,
-      "vd_adult_l": 10.0,
-      "fm": {
-        "cyp2c9": 0.9
-      },
-      "target_metric": "css",
-      "typical_adult_dose_mg_per_day": 1200,
-      "oral_bioavailability": 0.8,
-      "elimination": "hepatic",
-      "enzymes": [
-        "CYP2C9"
-      ],
-      "transporters": [],
-      "active_metabolites": [],
-      "protein_binding_percent": 99,
-      "toxic_dose_mg_per_kg_per_day": 40,
-      "effective_dose_mg_per_kg_per_day": 5,
-      "narrow_therapeutic_index": false,
-      "route_default": "iv",
-      "indication_default": "PDA closure / analgesia",
-      "notes": "very high PB; neonate PDA use",
-      "citations": [
-        {
-          "claim": "Curated adult PK for demo (ibuprofen): CL=3.5 L/h, Vd=10.0 L, fm={'cyp2c9': 0.9}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
-        }
-      ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
     },
     "metronidazole": {
       "cl_adult_l_h": 4.0,
@@ -217,38 +590,46 @@
       "citations": [
         {
           "claim": "Curated adult PK for demo (metronidazole): CL=4.0 L/h, Vd=50.0 L, fm={'cyp2c9': 0.3, 'cyp3a4': 0.2}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
         }
       ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
     },
-    "gentamicin": {
-      "cl_adult_l_h": 5.4,
-      "vd_adult_l": 18.0,
+    "ondansetron": {
+      "cl_adult_l_h": 30.0,
+      "vd_adult_l": 140.0,
       "fm": {
-        "renal_gfr": 0.95
+        "cyp3a4": 0.5,
+        "cyp1a2": 0.2,
+        "cyp2d6": 0.2
       },
-      "target_metric": "cmax",
-      "typical_adult_dose_mg_per_day": 350,
-      "oral_bioavailability": 0.0,
-      "elimination": "renal",
-      "enzymes": [],
-      "transporters": [],
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 24,
+      "oral_bioavailability": 0.6,
+      "elimination": "hepatic",
+      "enzymes": [
+        "CYP3A4",
+        "CYP1A2",
+        "CYP2D6"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
       "active_metabolites": [],
-      "protein_binding_percent": 10,
-      "toxic_dose_mg_per_kg_per_day": 12,
-      "effective_dose_mg_per_kg_per_day": 4,
-      "narrow_therapeutic_index": true,
+      "protein_binding_percent": 70,
+      "toxic_dose_mg_per_kg_per_day": 1.0,
+      "effective_dose_mg_per_kg_per_day": 0.1,
+      "narrow_therapeutic_index": false,
       "route_default": "iv",
-      "indication_default": "gram-negative infection",
-      "notes": "Cmax/MIC; TDM",
+      "indication_default": "nausea / vomiting",
+      "notes": "multi-CYP; used in neonates off-label carefully",
       "citations": [
         {
-          "claim": "Curated adult PK for demo (gentamicin): CL=5.4 L/h, Vd=18.0 L, fm={'renal_gfr': 0.95}",
-          "source": "PaedScale demo pack (reviewed seed; not live PubMed/openFDA)"
+          "claim": "Curated adult PK for demo (ondansetron): CL=30.0 L/h, Vd=140.0 L, fm={'cyp3a4': 0.5, 'cyp1a2': 0.2, 'cyp2d6': 0.2}",
+          "source": "PaedScale demo pack (reviewed validation seed; not live PubMed/openFDA)"
         }
       ],
-      "confidence": "demo pack \u2014 curated offline PK; skip live retrieval for speed/reliability"
+      "confidence": "demo pack \u2014 curated offline PK + guidelines; skip live retrieval for speed"
     }
   }
 }

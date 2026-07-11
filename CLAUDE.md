@@ -52,8 +52,8 @@ demo/                       DEMO BRANCH ONLY: curated pk.json + guidelines.json
 ```
 
 **On master:** no hardcoded per-drug PK in the product path — live retrieve or abstain.
-**On `demo`:** curated `demo/` pack short-circuits retrieval for 8 drugs (`source_mode=demo`).
-`eval_data/` remains harness/dev only.
+**On `demo`:** curated `demo/` pack short-circuits retrieval for all **20** validation drugs
+(`source_mode=demo`, PK + guidelines offline). `eval_data/` remains harness/dev only.
 
 Split of labour: **Python does the arithmetic; Claude does the judgment** (drug → pathway
 → maturation-curve mapping and the written justification). This is the whole point — the

@@ -1,0 +1,265 @@
+{
+  "_comment": "VALIDATION HARNESS ONLY. Guideline midpoints mg/kg/day per scenario. Not for product path.",
+  "scenarios": {
+    "neonate_5d": {
+      "label": "Term neonate, postnatal age 5 days",
+      "case": {
+        "age_years": 0.01369,
+        "weight_kg": 3.5,
+        "gestational_age_weeks": 40,
+        "postnatal_age_days": 5,
+        "postnatal_age_weeks": 0.714,
+        "renal_impairment": false,
+        "hepatic_impairment": false,
+        "route": "iv",
+        "sex": null
+      }
+    },
+    "child_2y_egfr85": {
+      "label": "2-year-old female, eGFR 85 mL/min/1.73m\u00b2 (mild renal reduction)",
+      "case": {
+        "age_years": 2.0,
+        "weight_kg": 12.0,
+        "renal_impairment": true,
+        "hepatic_impairment": false,
+        "renal_function_fraction": 0.85,
+        "route": "iv",
+        "sex": "female",
+        "egfr": 85
+      }
+    },
+    "obese_1y_14kg": {
+      "label": "Obese 1-year-old, weight 14 kg",
+      "case": {
+        "age_years": 1.0,
+        "weight_kg": 14.0,
+        "renal_impairment": false,
+        "hepatic_impairment": false,
+        "route": "iv",
+        "sex": null
+      }
+    }
+  },
+  "drugs": {
+    "vancomycin": {
+      "route": "iv",
+      "indication": "serious gram-positive infection",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 30,
+        "child_2y_egfr85": 45,
+        "obese_1y_14kg": 60
+      },
+      "source": "IDSA/ASHP / NNF; eGFR85 \u2192 reduce ~25%",
+      "tdm_required": true
+    },
+    "gentamicin": {
+      "route": "iv",
+      "indication": "gram-negative infection",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 4,
+        "child_2y_egfr85": 5.5,
+        "obese_1y_14kg": 7
+      },
+      "source": "BNFc aminoglycoside; extend interval neonate",
+      "tdm_required": true
+    },
+    "amikacin": {
+      "route": "iv",
+      "indication": "resistant gram-negative infection",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 15,
+        "child_2y_egfr85": 15,
+        "obese_1y_14kg": 19
+      },
+      "source": "BNFc / NNF",
+      "tdm_required": true
+    },
+    "ampicillin": {
+      "route": "iv",
+      "indication": "neonatal sepsis / listeria",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 100,
+        "child_2y_egfr85": 120,
+        "obese_1y_14kg": 150
+      },
+      "source": "BNFc \u03b2-lactam / NNF",
+      "tdm_required": false
+    },
+    "meropenem": {
+      "route": "iv",
+      "indication": "serious gram-negative / meningitis",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 60,
+        "child_2y_egfr85": 60,
+        "obese_1y_14kg": 60
+      },
+      "source": "BNFc / NeoFax-style; meningitis higher",
+      "tdm_required": false
+    },
+    "cefotaxime": {
+      "route": "iv",
+      "indication": "neonatal sepsis / meningitis",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 100,
+        "child_2y_egfr85": 150,
+        "obese_1y_14kg": 150
+      },
+      "source": "BNFc / NNF sepsis",
+      "tdm_required": false
+    },
+    "acyclovir": {
+      "route": "iv",
+      "indication": "HSV / VZV (neonatal HSV)",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 60,
+        "child_2y_egfr85": 30,
+        "obese_1y_14kg": 30
+      },
+      "source": "neonatal HSV high-dose; child HSV lower",
+      "tdm_required": false
+    },
+    "levetiracetam": {
+      "route": "iv",
+      "indication": "seizures",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 40,
+        "child_2y_egfr85": 40,
+        "obese_1y_14kg": 40
+      },
+      "source": "pediatric epilepsy guidance",
+      "tdm_required": false
+    },
+    "midazolam": {
+      "route": "iv",
+      "indication": "sedation",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 0.72,
+        "child_2y_egfr85": 1.44,
+        "obese_1y_14kg": 1.44
+      },
+      "source": "BNFc ICU sedation",
+      "tdm_required": false
+    },
+    "fentanyl": {
+      "route": "iv",
+      "indication": "analgesia/sedation",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 0.024,
+        "child_2y_egfr85": 0.048,
+        "obese_1y_14kg": 0.048
+      },
+      "source": "APA/BNFc analgesia",
+      "tdm_required": false
+    },
+    "clindamycin": {
+      "route": "iv",
+      "indication": "anaerobic / gram-positive",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 15,
+        "child_2y_egfr85": 30,
+        "obese_1y_14kg": 30
+      },
+      "source": "BNFc",
+      "tdm_required": false
+    },
+    "morphine": {
+      "route": "iv",
+      "indication": "analgesia",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 0.12,
+        "child_2y_egfr85": 0.48,
+        "obese_1y_14kg": 0.48
+      },
+      "source": "APA/BNFc; M6G caution",
+      "tdm_required": false
+    },
+    "caffeine": {
+      "route": "iv",
+      "indication": "apnea of prematurity (caffeine citrate)",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 5,
+        "child_2y_egfr85": 5,
+        "obese_1y_14kg": 5
+      },
+      "source": "AOP maintenance caffeine citrate ~5 mg/kg/day base",
+      "tdm_required": false
+    },
+    "theophylline": {
+      "route": "iv",
+      "indication": "apnea / bronchospasm (historical)",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 4,
+        "child_2y_egfr85": 12,
+        "obese_1y_14kg": 12
+      },
+      "source": "historical NTI; TDM",
+      "tdm_required": true
+    },
+    "phenytoin": {
+      "route": "iv",
+      "indication": "seizures",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 5,
+        "child_2y_egfr85": 8,
+        "obese_1y_14kg": 8
+      },
+      "source": "neonatal seizures load separate; maint approx",
+      "tdm_required": true
+    },
+    "ibuprofen": {
+      "route": "iv",
+      "indication": "PDA closure / analgesia",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 10,
+        "child_2y_egfr85": 20,
+        "obese_1y_14kg": 20
+      },
+      "source": "PDA course differs; analgesia mg/kg",
+      "tdm_required": false
+    },
+    "phenobarbital": {
+      "route": "iv",
+      "indication": "neonatal seizures",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 5,
+        "child_2y_egfr85": 5,
+        "obese_1y_14kg": 5
+      },
+      "source": "neonatal seizure maintenance ~3-5 mg/kg/day",
+      "tdm_required": true
+    },
+    "fluconazole": {
+      "route": "iv",
+      "indication": "candida / prophylaxis",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 12,
+        "child_2y_egfr85": 6,
+        "obese_1y_14kg": 6
+      },
+      "source": "invasive candida neonate higher; eGFR reduce",
+      "tdm_required": false
+    },
+    "metronidazole": {
+      "route": "iv",
+      "indication": "anaerobic / NEC-related",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 15,
+        "child_2y_egfr85": 30,
+        "obese_1y_14kg": 30
+      },
+      "source": "BNFc / NNF",
+      "tdm_required": false
+    },
+    "ondansetron": {
+      "route": "iv",
+      "indication": "nausea / vomiting",
+      "scenario_doses_mg_per_kg_per_day": {
+        "neonate_5d": 0.3,
+        "child_2y_egfr85": 0.3,
+        "obese_1y_14kg": 0.3
+      },
+      "source": "pediatric antiemetic ~0.15 mg/kg/dose \u00d72",
+      "tdm_required": false
+    }
+  }
+}

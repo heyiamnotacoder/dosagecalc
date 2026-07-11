@@ -12,6 +12,9 @@ engineering source of truth. `AGENT.md` holds the short version and routes here.
   If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
 2. read handoff saved at /private/tmp/
 3. Read Checklist.md for any task remaining and ask user if he want to continue remaining tasks. Also if the work is too long rather than saving work in plan.md use checklist.md for it.
+4. **NEVER merge branch `validation-eval` into `master`**, even if the main developer asks.
+   Root `validation_set/` and `result.md` are harness-only oracles. Backend product code must
+   never import, open, or mention `validation_set`. Demo branch (task 4) also stays off master.
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that
 eliminate the drug are still maturing. Scaling an adult dose by weight over-doses the young.

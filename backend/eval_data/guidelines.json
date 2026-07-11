@@ -1,0 +1,189 @@
+{
+  "_comment": "TEST-ONLY pediatric guideline doses for the concordance check. Small, hand-reviewed, reproducible. Used to score the engine; the live 'any drug' path lets Claude retrieve the guideline dose instead. Doses are typical published pediatric maintenance ranges; verify against BNFc/Lexicomp before any real use.",
+  "_band": "Concordance is scored as within 1.5x / 0.67x of the guideline midpoint.",
+  "drugs": {
+    "midazolam": {
+      "route": "IV",
+      "indication": "procedural/ICU sedation (continuous infusion)",
+      "populations": [
+        {
+          "label": "child 1-12 yr",
+          "age_years_min": 1,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 1.44,
+          "dose_note": "~0.06 mg/kg/h continuous infusion (0.03-0.12 range) = ~1.44 mg/kg/day midpoint",
+          "source": "BNFc / pediatric ICU sedation references"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 0.72,
+          "dose_note": "~0.03 mg/kg/h (0.01-0.06) reflecting immature CYP3A4",
+          "source": "Neonatal formulary"
+        }
+      ]
+    },
+    "vancomycin": {
+      "route": "IV",
+      "indication": "serious gram-positive infection",
+      "tdm_required": true,
+      "populations": [
+        {
+          "label": "child > 1 month",
+          "age_years_min": 0.08,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 60,
+          "dose_note": "15 mg/kg q6h = 60 mg/kg/day, titrate to AUC24/MIC 400-600",
+          "source": "IDSA/ASHP vancomycin pediatric guidance"
+        },
+        {
+          "label": "neonate (term, PNA 1-4 wk)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 30,
+          "dose_note": "~15 mg/kg q12h reflecting immature GFR; TDM-driven",
+          "source": "Neonatal formulary"
+        }
+      ]
+    },
+    "morphine": {
+      "route": "IV",
+      "indication": "analgesia (continuous infusion)",
+      "active_metabolite_flag": "M6G (active, renally cleared)",
+      "populations": [
+        {
+          "label": "child 1-12 yr",
+          "age_years_min": 1,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 0.48,
+          "dose_note": "~10-40 mcg/kg/h; ~20 mcg/kg/h = 0.48 mg/kg/day midpoint",
+          "source": "APA/BNFc pediatric analgesia"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 0.12,
+          "dose_note": "~5 mcg/kg/h reflecting immature UGT2B7 + M6G accumulation risk",
+          "source": "Neonatal formulary"
+        }
+      ]
+    },
+    "gentamicin": {
+      "route": "IV",
+      "indication": "serious gram-negative infection",
+      "tdm_required": true,
+      "exposure_metric": "Cmax/MIC (peak-driven)",
+      "populations": [
+        {
+          "label": "child > 1 month",
+          "age_years_min": 0.08,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 7,
+          "dose_note": "~7 mg/kg q24h extended-interval; TDM peak & trough",
+          "source": "BNFc / pediatric aminoglycoside guidance"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 4,
+          "dose_note": "~5 mg/kg q36h reflecting immature GFR (dose size similar, interval extended)",
+          "source": "Neonatal formulary (NNF)"
+        }
+      ]
+    },
+    "amikacin": {
+      "route": "IV",
+      "indication": "serious gram-negative infection (aminoglycoside-resistant)",
+      "tdm_required": true,
+      "exposure_metric": "Cmax/MIC (peak-driven)",
+      "populations": [
+        {
+          "label": "child > 1 month",
+          "age_years_min": 0.08,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 19,
+          "dose_note": "~15-20 mg/kg q24h extended-interval; TDM",
+          "source": "BNFc / pediatric aminoglycoside guidance"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 15,
+          "dose_note": "~15 mg/kg q24-36h reflecting immature GFR",
+          "source": "Neonatal formulary (NNF)"
+        }
+      ]
+    },
+    "fentanyl": {
+      "route": "IV",
+      "indication": "analgesia/sedation (continuous infusion)",
+      "populations": [
+        {
+          "label": "child 1-12 yr",
+          "age_years_min": 1,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 0.048,
+          "dose_note": "~1-4 mcg/kg/h; ~2 mcg/kg/h = 0.048 mg/kg/day midpoint",
+          "source": "APA/BNFc pediatric analgesia"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 0.024,
+          "dose_note": "~1 mcg/kg/h reflecting immature CYP3A4",
+          "source": "Neonatal formulary"
+        }
+      ]
+    },
+    "ampicillin": {
+      "route": "IV",
+      "indication": "serious gram-positive / listeria / neonatal sepsis",
+      "exposure_metric": "time>MIC (fT>MIC-driven)",
+      "populations": [
+        {
+          "label": "child 1-12 yr",
+          "age_years_min": 1,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 150,
+          "dose_note": "100-200 mg/kg/day divided q6h; midpoint 150",
+          "source": "BNFc / pediatric β-lactam guidance"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 100,
+          "dose_note": "~50 mg/kg q12h reflecting immature renal clearance",
+          "source": "Neonatal formulary"
+        }
+      ]
+    },
+    "clindamycin": {
+      "route": "IV",
+      "indication": "gram-positive / anaerobic infection",
+      "populations": [
+        {
+          "label": "child 1-12 yr",
+          "age_years_min": 1,
+          "age_years_max": 12,
+          "dose_mg_per_kg_per_day": 30,
+          "dose_note": "20-40 mg/kg/day divided q6-8h; midpoint 30",
+          "source": "BNFc / pediatric guidance"
+        },
+        {
+          "label": "neonate (term)",
+          "age_years_min": 0,
+          "age_years_max": 0.08,
+          "dose_mg_per_kg_per_day": 15,
+          "dose_note": "~5 mg/kg q8h reflecting immature CYP3A4",
+          "source": "Neonatal formulary"
+        }
+      ]
+    }
+  }
+}

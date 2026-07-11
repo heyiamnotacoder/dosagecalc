@@ -1,0 +1,184 @@
+{
+  "_comment": "EVAL ORACLE \u2014 reviewed adult PK + mechanism per drug. Read ONLY by the test harness / dev /pk endpoint to score the live agent. The production agent (/calculate, retrieval.py) NEVER reads this \u2014 it must retrieve live or abstain.",
+  "drugs": {
+    "midazolam": {
+      "cl_adult_l_h": 24.0,
+      "vd_adult_l": 70.0,
+      "fm": {
+        "cyp3a4": 0.95
+      },
+      "target_metric": "css",
+      "oral_bioavailability": 0.4,
+      "narrow_therapeutic_index": false,
+      "active_metabolite": "1-OH-midazolam (minor contribution)",
+      "typical_adult_dose_mg_per_day": null,
+      "flags": [
+        "Cleanest CYP3A4 archetype; high oral first-pass (F~0.4)."
+      ],
+      "protein_binding_percent": 97.0,
+      "transporters": [
+        "P-gp (minor substrate)"
+      ],
+      "toxic_dose_mg_per_kg_per_day": 6.0,
+      "effective_dose_mg_per_kg_per_day": 0.5,
+      "safety_note": "Titrated sedative \u2014 toxic/effective bounds are SOFT and context-dependent (respiratory depression is the practical ceiling). Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "vancomycin": {
+      "cl_adult_l_h": 4.2,
+      "vd_adult_l": 49.0,
+      "fm": {
+        "renal_gfr": 0.9
+      },
+      "target_metric": "auc",
+      "oral_bioavailability": 0.0,
+      "narrow_therapeutic_index": true,
+      "active_metabolite": null,
+      "typical_adult_dose_mg_per_day": 2000.0,
+      "flags": [
+        "AUC/MIC-driven + narrow therapeutic index \u2014 recommend TDM, do NOT stand alone."
+      ],
+      "protein_binding_percent": 50.0,
+      "transporters": [],
+      "toxic_dose_mg_per_kg_per_day": 80.0,
+      "effective_dose_mg_per_kg_per_day": 30.0,
+      "safety_note": "AUC24/MIC 400\u2013600 target; bounds approximate \u2014 TDM governs, not these seeds.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "morphine": {
+      "cl_adult_l_h": 90.0,
+      "vd_adult_l": 230.0,
+      "fm": {
+        "ugt2b7": 0.7
+      },
+      "target_metric": "css",
+      "oral_bioavailability": 0.25,
+      "narrow_therapeutic_index": false,
+      "active_metabolite": "Morphine-6-glucuronide (M6G) \u2014 ACTIVE, renally cleared; accumulates in renal impairment / neonates.",
+      "typical_adult_dose_mg_per_day": null,
+      "flags": [
+        "Active renally-cleared metabolite (M6G) must be flagged \u2014 parent-clearance match understates effect when renal function is immature/impaired.",
+        "High extraction / first-pass \u2014 oral F ~0.25."
+      ],
+      "protein_binding_percent": 35.0,
+      "transporters": [
+        "P-gp"
+      ],
+      "toxic_dose_mg_per_kg_per_day": 2.0,
+      "effective_dose_mg_per_kg_per_day": 0.1,
+      "safety_note": "Titrated opioid \u2014 bounds SOFT (respiratory depression is the practical ceiling; M6G accumulation lowers it further in renal immaturity). Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "gentamicin": {
+      "cl_adult_l_h": 5.4,
+      "vd_adult_l": 18.0,
+      "fm": {
+        "renal_gfr": 0.95
+      },
+      "target_metric": "cmax",
+      "oral_bioavailability": 0.0,
+      "narrow_therapeutic_index": true,
+      "active_metabolite": null,
+      "typical_adult_dose_mg_per_day": 350.0,
+      "flags": [
+        "Cmax/MIC-driven aminoglycoside \u2014 the PEAK sets efficacy, the TROUGH sets toxicity. Dose is size-matched (Vd), but the INTERVAL must be extended when clearance is immature \u2014 recommend extended-interval dosing + TDM (peak & trough).",
+        "Nephro-/ototoxic with narrow TI \u2014 do NOT stand alone; confirm with TDM."
+      ],
+      "protein_binding_percent": 10.0,
+      "transporters": [],
+      "toxic_dose_mg_per_kg_per_day": 12.0,
+      "effective_dose_mg_per_kg_per_day": 4.0,
+      "safety_note": "Aminoglycoside \u2014 toxicity is TROUGH-driven, efficacy is PEAK-driven; these daily-dose bounds are approximate and TDM governs. Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "amikacin": {
+      "cl_adult_l_h": 5.4,
+      "vd_adult_l": 18.0,
+      "fm": {
+        "renal_gfr": 0.95
+      },
+      "target_metric": "cmax",
+      "oral_bioavailability": 0.0,
+      "narrow_therapeutic_index": true,
+      "active_metabolite": null,
+      "typical_adult_dose_mg_per_day": 1050.0,
+      "flags": [
+        "Cmax/MIC-driven aminoglycoside (same archetype as gentamicin) \u2014 extended interval + TDM in the young; peak drives kill, trough drives toxicity.",
+        "Narrow TI, nephro-/ototoxic \u2014 TDM-dependent, does not stand alone."
+      ],
+      "protein_binding_percent": 10.0,
+      "transporters": [],
+      "toxic_dose_mg_per_kg_per_day": 30.0,
+      "effective_dose_mg_per_kg_per_day": 15.0,
+      "safety_note": "Aminoglycoside \u2014 trough-driven toxicity, peak-driven efficacy; daily-dose bounds approximate, TDM governs. Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "fentanyl": {
+      "cl_adult_l_h": 50.0,
+      "vd_adult_l": 280.0,
+      "fm": {
+        "cyp3a4": 0.9
+      },
+      "target_metric": "css",
+      "oral_bioavailability": 0.33,
+      "narrow_therapeutic_index": false,
+      "active_metabolite": null,
+      "typical_adult_dose_mg_per_day": null,
+      "flags": [
+        "Extremely potent \u2014 dosed in micrograms; a size/clearance-scaled number must be sanity-checked against mcg/kg/h infusion practice.",
+        "CYP3A4 substrate \u2014 clearance (and this estimate) shifts with CYP3A4 inhibitors/inducers; context-sensitive half-time lengthens with infusion duration."
+      ],
+      "protein_binding_percent": 84.0,
+      "transporters": [
+        "P-gp"
+      ],
+      "toxic_dose_mg_per_kg_per_day": 0.2,
+      "effective_dose_mg_per_kg_per_day": 0.01,
+      "safety_note": "Extremely potent, titrated \u2014 bounds SOFT (respiratory depression / chest-wall rigidity are the practical ceilings). Sanity-check against mcg/kg/h. Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "ampicillin": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 21.0,
+      "fm": {
+        "renal_gfr": 0.9
+      },
+      "target_metric": "time_mic",
+      "oral_bioavailability": 0.4,
+      "narrow_therapeutic_index": false,
+      "active_metabolite": null,
+      "typical_adult_dose_mg_per_day": 8000.0,
+      "flags": [
+        "TIME>MIC-driven \u03b2-lactam \u2014 efficacy depends on the FRACTION of the interval above MIC, not on total exposure. The total-daily-dose match is only a proxy: frequent dosing or extended/continuous infusion is what actually hits the target."
+      ],
+      "protein_binding_percent": 18.0,
+      "transporters": [],
+      "toxic_dose_mg_per_kg_per_day": 400.0,
+      "effective_dose_mg_per_kg_per_day": 25.0,
+      "safety_note": "Very wide therapeutic index \u03b2-lactam \u2014 toxicity (CNS/seizure) only at extreme doses; the fT>MIC target, not these bounds, governs efficacy. Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    },
+    "clindamycin": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 60.0,
+      "fm": {
+        "cyp3a4": 0.9
+      },
+      "target_metric": "css",
+      "oral_bioavailability": 0.9,
+      "narrow_therapeutic_index": false,
+      "active_metabolite": null,
+      "typical_adult_dose_mg_per_day": 1800.0,
+      "flags": [
+        "Hepatic CYP3A4 clearance \u2014 shares the midazolam maturation curve; clearance in the young is CYP3A4-limited, not size-limited.",
+        "C. difficile colitis risk \u2014 an antimicrobial-stewardship consideration, not a PK one."
+      ],
+      "protein_binding_percent": 90.0,
+      "transporters": [],
+      "toxic_dose_mg_per_kg_per_day": 60.0,
+      "effective_dose_mg_per_kg_per_day": 8.0,
+      "safety_note": "Wide TI; bounds approximate \u2014 GI/C. difficile risk is the practical limiter, not a PK toxic threshold. Seeds only.",
+      "source": "Seed values \u2014 verify against label/PubMed in live path."
+    }
+  }
+}

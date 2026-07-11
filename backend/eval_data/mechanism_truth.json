@@ -1,0 +1,79 @@
+{
+  "_comment": "TEST-ONLY mechanistic answer key for the PRD mechanistic-reasoning eval (PRD lines 77-84). Hand-reviewed. The scorer in test_agent.py compares the model's submit_recommendation.mechanism against this. Empty lists are meaningful: they encode a correct-negative (e.g. 'no transporter'), which the model must also get right rather than inventing one. protein_binding_percent is scored within an absolute tolerance. Verify against label/DrugBank/PubMed before any real use.",
+  "_dimensions": ["elimination", "pathways", "enzymes", "transporters", "active_metabolites", "protein_binding_percent"],
+  "_protein_binding_tolerance_abs_pct": 20,
+  "drugs": {
+    "midazolam": {
+      "elimination": "hepatic",
+      "pathways": ["cyp3a4"],
+      "enzymes": ["CYP3A4"],
+      "transporters": ["P-gp"],
+      "active_metabolites": ["1-OH-midazolam"],
+      "protein_binding_percent": 97,
+      "source": "Label / DrugBank — CYP3A4/3A5, P-gp substrate; 1-hydroxymidazolam active (minor)."
+    },
+    "vancomycin": {
+      "elimination": "renal",
+      "pathways": ["renal_gfr"],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 50,
+      "source": "Label — ~80-90% renal unchanged; no CYP; no active metabolite."
+    },
+    "morphine": {
+      "elimination": "hepatic",
+      "pathways": ["ugt2b7"],
+      "enzymes": ["UGT2B7"],
+      "transporters": ["P-gp"],
+      "active_metabolites": ["M6G", "M3G"],
+      "protein_binding_percent": 35,
+      "source": "DrugBank — UGT2B7 glucuronidation; M6G active (renally cleared), M3G neuro-excitatory; P-gp substrate."
+    },
+    "gentamicin": {
+      "elimination": "renal",
+      "pathways": ["renal_gfr"],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 10,
+      "source": "Label — glomerular filtration, unchanged; not metabolised; low protein binding."
+    },
+    "amikacin": {
+      "elimination": "renal",
+      "pathways": ["renal_gfr"],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 10,
+      "source": "Label — renal filtration, unchanged; not metabolised; low protein binding."
+    },
+    "fentanyl": {
+      "elimination": "hepatic",
+      "pathways": ["cyp3a4"],
+      "enzymes": ["CYP3A4"],
+      "transporters": ["P-gp"],
+      "active_metabolites": [],
+      "protein_binding_percent": 84,
+      "source": "DrugBank — CYP3A4 to inactive norfentanyl; P-gp substrate; no active metabolite."
+    },
+    "ampicillin": {
+      "elimination": "renal",
+      "pathways": ["renal_gfr"],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 18,
+      "source": "Label — predominantly renal (tubular secretion + filtration), minimal metabolism."
+    },
+    "clindamycin": {
+      "elimination": "hepatic",
+      "pathways": ["cyp3a4"],
+      "enzymes": ["CYP3A4"],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 90,
+      "source": "DrugBank — hepatic CYP3A4 (to N-demethyl/sulfoxide); high protein binding."
+    }
+  }
+}

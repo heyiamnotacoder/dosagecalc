@@ -15,6 +15,7 @@ import os
 
 from anthropic import Anthropic
 
+from demo_pack import lookup as demo_lookup
 from engine.pk_cache import CACHE as PK_CACHE
 from retrieval.retrieval_tools import TOOL_FUNCS, TOOL_SCHEMAS, openfda_label
 from skills import load_skill, list_skills
@@ -95,9 +96,24 @@ def _abstention(reason: str) -> dict:
 
 def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5,
           use_cache: bool = True) -> dict:
-    """Retrieve a cited PK+mechanism dossier. Returns live, cache, or unavailable; never raises."""
+    """Retrieve a cited PK+mechanism dossier. Returns demo, live, cache, or unavailable; never raises."""
     trace: list[str] = []
     usage = {"input_tokens": 0, "output_tokens": 0, "model": RETRIEVAL_MODEL, "cache_hit": False}
+
+    # Demo pack (branch `demo` only): curated JSON — skip live retrieval entirely.
+    demo = demo_lookup(drug)
+    if demo is not None:
+        payload = {
+            "dossier": demo["dossier"],
+            "source_mode": "demo",
+            "trace": [f"demo pack hit for {drug!r} — skipped live PubMed/openFDA"],
+            "usage": usage,
+        }
+        if demo.get("guideline"):
+            payload["guideline"] = demo["guideline"]
+            payload["trace"].append("demo guideline midpoints attached for concordance")
+        return payload
+
     if use_cache:
         hit = PK_CACHE.get(drug, indication)
         if hit:

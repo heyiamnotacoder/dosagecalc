@@ -391,8 +391,8 @@
     <!-- coverage -->
     <div class="section" id="drugs">
       <h2>Drug coverage</h2>
-      <p class="sub">Eight seeded drugs across three maturation curves and four exposure archetypes.
-        Each reuses an already-sourced ontogeny constant — cite-or-abstain holds.</p>
+      <p class="sub">Eight curated <strong>demo</strong> drugs (best performers from validation).
+        Offline PK pack — when selected, live PubMed/openFDA retrieval is skipped.</p>
       <div class="drug-grid" id="drug-grid"></div>
     </div>
 
@@ -410,22 +410,20 @@
     <form class="calc-card" id="form">
       <div class="kicker">New case</div>
       <h2>Dose a child</h2>
-      <p class="intro">Enter the patient and PaedScale will reason live to a graded, cited starting dose.</p>
+      <p class="intro">Demo pack: curated PK for these drugs (no live retrieval). Orchestrator still grades and justifies.</p>
 
       <div class="field">
         <label for="drug">Drug</label>
         <select id="drug">
-          <optgroup label="Stage 1 — archetypes">
-            <option value="vancomycin">Vancomycin — renal / GFR · AUC, NTI→TDM</option>
-            <option value="midazolam">Midazolam — CYP3A4 · sedation</option>
-            <option value="morphine">Morphine — UGT2B7 · active M6G</option>
-          </optgroup>
-          <optgroup label="Stage 2">
-            <option value="gentamicin">Gentamicin — renal / GFR · Cmax/MIC, NTI→TDM</option>
+          <optgroup label="Demo pack — validation best">
+            <option value="clindamycin">Clindamycin — CYP3A4 · css</option>
             <option value="amikacin">Amikacin — renal / GFR · Cmax/MIC, NTI→TDM</option>
-            <option value="ampicillin">Ampicillin — renal / GFR · time&gt;MIC</option>
-            <option value="fentanyl">Fentanyl — CYP3A4 · potent</option>
-            <option value="clindamycin">Clindamycin — CYP3A4</option>
+            <option value="phenobarbital">Phenobarbital — CYP2C19/2C9 · TDM</option>
+            <option value="vancomycin">Vancomycin — renal / GFR · AUC, NTI→TDM</option>
+            <option value="levetiracetam">Levetiracetam — renal / GFR · css</option>
+            <option value="ibuprofen">Ibuprofen — CYP2C9 · high PB</option>
+            <option value="metronidazole">Metronidazole — mixed hepatic · metabolite</option>
+            <option value="gentamicin">Gentamicin — renal / GFR · Cmax/MIC, NTI→TDM</option>
           </optgroup>
         </select>
       </div>
@@ -592,14 +590,14 @@ const $ = id => document.getElementById(id);
 
 /* ---------------- drug catalogue (for landing + display names) ---------------- */
 const DRUGS = {
-  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"Narrow TI → recommend TDM"},
-  midazolam:{name:"Midazolam",path:"CYP3A4 · Css",edge:"High oral first-pass; titrate to sedation"},
-  morphine:{name:"Morphine",path:"UGT2B7 · Css",edge:"Active renally-cleared metabolite (M6G)"},
+  clindamycin:{name:"Clindamycin",path:"CYP3A4 · Css",edge:"Best strict concordance; hepatic CYP3A4"},
+  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"3/3 strict; NTI → TDM"},
+  phenobarbital:{name:"Phenobarbital",path:"CYP2C19/2C9 · Css",edge:"3/3 strict; long half-life · TDM"},
+  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"Classic NTI → recommend TDM"},
+  levetiracetam:{name:"Levetiracetam",path:"renal / GFR · Css",edge:"Grade A case; mostly renal unchanged"},
+  ibuprofen:{name:"Ibuprofen",path:"CYP2C9 · Css",edge:"Very high protein binding"},
+  metronidazole:{name:"Metronidazole",path:"CYP2C9/3A4 · Css",edge:"Active hydroxy metabolite"},
   gentamicin:{name:"Gentamicin",path:"renal / GFR · Cmax/MIC",edge:"NTI → TDM; extend interval in the young"},
-  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"Same Cmax/MIC aminoglycoside archetype"},
-  ampicillin:{name:"Ampicillin",path:"renal / GFR · time>MIC",edge:"Daily-dose match is a proxy for fT>MIC"},
-  fentanyl:{name:"Fentanyl",path:"CYP3A4 · Css",edge:"Extreme potency (mcg dosing)"},
-  clindamycin:{name:"Clindamycin",path:"CYP3A4 · Css",edge:"Hepatic CYP3A4 antibiotic"},
 };
 (function fillDrugs(){
   $("drug-grid").innerHTML = Object.values(DRUGS).map(d=>
@@ -695,9 +693,13 @@ function esc(s){ return (s||"").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">"
 /* turn a raw backend step into a cutesy, human-readable console line + stage move */
 function handleStep(text){
   const drugName = (DRUGS[currentCase.drug]||{}).name || currentCase.drug;
-  if(text.startsWith("→ retrieve_drug_data")){
+  if(text.startsWith("→ retrieve_drug_data") || text.startsWith("→ demo pack hit")){
     advanceTo("retrieve");
-    pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);
+    if(text.includes("demo pack") || text.includes("skipped live")){
+      pushLine(`<span class="arrow">⚗ demo pack</span> — curated PK for <b>${esc(drugName)}</b> (no live retrieval)…`);
+    } else {
+      pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);
+    }
   } else if(text.startsWith("→ compute_pediatric_dose")){
     advanceTo("compute");
     pushLine(`<span class="arrow">∫ engine</span> — scaling adult PK by allometry × maturation…`);

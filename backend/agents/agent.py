@@ -33,7 +33,9 @@ Decision support for a clinician — NOT a prescriber.
 Pipeline (lean):
 1. load_skill('mechanism') if needed → map elimination / fm / target_metric / mechanism fields.
    Empty lists for absent transporters/metabolites. Cite-or-abstain.
-2. retrieve_drug_data FIRST — only PK source (live or shared cache). Null/unavailable → grade D, no invented numbers.
+2. retrieve_drug_data FIRST — only PK source (demo pack | live | shared cache). Null/unavailable → grade D, no invented numbers.
+   On source_mode=demo the payload may include a `guideline` object (pediatric midpoints) — use it for concordance;
+   still web_search only if guideline is missing or age-band is unclear.
 3. compute_pediatric_dose with retrieved PK + child covariates (use case renal/hepatic fractions).
    Pass oral_bioavailability from the dossier; if a route is clinically non-viable (e.g. an oral
    route for a drug not systemically absorbed orally, F=0), pass routes_allowed (e.g. ["iv"]).
@@ -41,7 +43,7 @@ Pipeline (lean):
    final_dose_mg_per_kg_per_day AND final_dose_mg_per_day = null, grade = D, and block_reason
    verbatim as the FIRST flag. Never fabricate or carry forward a dose for a blocked case.
 4. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
-5. web_search pediatric guideline → concordance 0.67×–1.5× (none → grade B).
+5. Concordance 0.67×–1.5× vs guideline (demo-attached or web_search). None → grade B.
 6. Grade A/B/C/D; flag NTI→TDM, metabolites, oral-F, assumed-term, exposure-matching PD assumption.
 7. submit_recommendation once, last. Lean reasoning. Flag toxic/sub-therapeutic doses."""
 
@@ -62,8 +64,9 @@ TOOLS = [
     },
     {
         "name": "retrieve_drug_data",
-        "description": "LIVE retrieval subagent (PubMed + openFDA). ONLY source of drug PK. "
-                       "Returns source_mode live|unavailable.",
+        "description": "ONLY source of drug PK. Prefer demo pack when present (source_mode=demo, "
+                       "may include guideline midpoints); else live PubMed/openFDA or cache. "
+                       "Returns source_mode demo|live|cache|unavailable.",
         "input_schema": {
             "type": "object",
             "properties": {"drug": {"type": "string"}, "indication": {"type": "string"}},
@@ -353,15 +356,21 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                               "model": ORCHESTRATOR_MODEL},
                 }
             if tu.name == "retrieve_drug_data":
+                drug_name = tu.input.get("drug")
                 if on_step:
-                    on_step(f"→ retrieve_drug_data({tu.input.get('drug')}) — live PubMed/openFDA …")
+                    on_step(f"→ retrieve_drug_data({drug_name}) — demo pack or live PubMed/openFDA …")
                 rout = retrieval.fetch(tu.input["drug"], tu.input.get("indication"))
                 retr_in += rout["usage"].get("input_tokens", 0)
                 retr_out += rout["usage"].get("output_tokens", 0)
+                mode = rout["source_mode"]
+                if on_step and mode == "demo":
+                    on_step(f"→ demo pack hit for {drug_name} — skipped live retrieval")
                 payload = {
-                    "source_mode": rout["source_mode"],
+                    "source_mode": mode,
                     "dossier": rout["dossier"],
                 }
+                if rout.get("guideline"):
+                    payload["guideline"] = rout["guideline"]
                 tool_results.append({
                     "type": "tool_result", "tool_use_id": tu.id,
                     "content": json.dumps(payload),

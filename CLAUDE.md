@@ -12,6 +12,14 @@ engineering source of truth. `AGENT.md` holds the short version and routes here.
   If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
 2. read handoff saved at /private/tmp/
 3. Read Checklist.md for any task remaining and ask user if he want to continue remaining tasks. Also if the work is too long rather than saving work in plan.md use checklist.md for it.
+4. **NEVER merge branch `demo` into `master`.** Root `demo/` is offline curated PK for demos only.
+5. **NEVER merge branch `validation-eval` into `master`.** Harness oracles stay off the product path.
+
+## Demo branch (this branch)
+Root `demo/pk.json` + `demo/guidelines.json` + `backend/demo_pack.py`: when a listed drug is
+requested, `retrieval.fetch` returns `source_mode="demo"` and **skips live PubMed/openFDA**.
+Disable with `PAEDSCALE_DEMO=0`. Other drugs still use the live path.
+
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that
 eliminate the drug are still maturing. Scaling an adult dose by weight over-doses the young.
@@ -29,7 +37,7 @@ backend/                    (run all commands from here; backend/ is the package
     pk_cache.py             bounded in-process LRU for live dossiers (Render single-dyno shared pool)
     mechanism_score.py      mechanistic-reasoning scorer (6 PRD dimensions)
   retrieval/                retrieval subagent + tools (package; `import retrieval` → __init__.py)
-    __init__.py             RETRIEVAL SUBAGENT → cited dossier (or cache hit), or abstains
+    __init__.py             RETRIEVAL SUBAGENT → demo pack | live | cache | abstain
     retrieval_tools.py      httpx: PubMed E-utilities + openFDA + web_fetch
   agents/
     agent.py                Opus ORCHESTRATOR: load_skill → retrieve → compute → edge_cases → grade
@@ -38,12 +46,14 @@ backend/                    (run all commands from here; backend/ is the package
     mcp_server.py           MCP server for the same retrieval tools (FastMCP, stdio)
   tests/                    test_pk.py / test_agent.py
   skills/                   lean markdown skills (mechanism, pubmed, openfda, webfetch, edge_cases)
+  demo_pack.py              DEMO ONLY: load root demo/ JSON (skip live retrieval); top-level module
   eval_data/                ANSWER KEYS ONLY — harness never product path
+demo/                       DEMO BRANCH ONLY: curated pk.json + guidelines.json
 ```
 
-**No hardcoded per-drug PK in the product path.** The agent RETRIEVES adult PK live
-(`retrieval.py` → PubMed + openFDA) or serves a **TTL-bounded cache hit**, or ABSTAINS (grade D).
-`eval_data/` is harness/dev only.
+**On master:** no hardcoded per-drug PK in the product path — live retrieve or abstain.
+**On `demo`:** curated `demo/` pack short-circuits retrieval for 8 drugs (`source_mode=demo`).
+`eval_data/` remains harness/dev only.
 
 Split of labour: **Python does the arithmetic; Claude does the judgment** (drug → pathway
 → maturation-curve mapping and the written justification). This is the whole point — the

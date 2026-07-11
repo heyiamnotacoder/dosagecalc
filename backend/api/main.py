@@ -83,10 +83,13 @@ def index():
 
 @app.get("/health")
 def health():
+    from demo_pack import demo_enabled, list_demo_drugs
     from engine.pk_cache import CACHE as PK_CACHE
     return {"ok": True, "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "model": os.environ.get("ORCHESTRATOR_MODEL", "claude-opus-4-8"),
             "eval_drugs": sorted(_oracle_pk()),  # scored drug set (oracle), not a runtime source
+            "demo_pack": demo_enabled(),
+            "demo_drugs": list_demo_drugs(),
             "pk_cache": PK_CACHE.stats()}
 
 

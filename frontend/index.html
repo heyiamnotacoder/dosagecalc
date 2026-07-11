@@ -4,202 +4,833 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PaedScale — Pediatric Dose Extrapolation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#EFF3F3;--card:#FFFFFF;--ink:#12212A;--ink-2:#375260;--ink-3:#6A828D;
-    --line:#D5DFDF;--line-2:#E5ECEC;--teal:#0E7A6B;--teal-deep:#0A564B;--teal-wash:#E4F0ED;
+    --paper:#EFF3F3;--paper-2:#E6ECEC;--card:#FFFFFF;
+    --ink:#12212A;--ink-2:#375260;--ink-3:#6A828D;
+    --line:#D5DFDF;--line-2:#E5ECEC;
+    --teal:#0E7A6B;--teal-deep:#0A564B;--teal-wash:#E4F0ED;--teal-glow:rgba(14,122,107,.25);
     --amber:#B9760A;--amber-wash:#F7EDDA;--red:#B23A3A;--red-wash:#F7E4E4;
-    --shadow:0 1px 2px rgba(18,33,42,.04),0 8px 28px rgba(18,33,42,.06);
+    --console:#0C1A20;--console-ink:#B7D3CC;
+    --shadow:0 1px 2px rgba(18,33,42,.04),0 10px 34px rgba(18,33,42,.08);
+    --shadow-lg:0 2px 6px rgba(18,33,42,.05),0 30px 70px rgba(18,33,42,.14);
     --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --serif:"Fraunces",Georgia,serif;
+    --sans:"Inter",system-ui,sans-serif;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;
-    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:900px;margin:0 auto;padding:26px 22px 80px}
-  header h1{font-size:1.55rem;margin:0 0 4px;letter-spacing:-.01em}
-  header .tag{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-deep)}
-  header p{color:var(--ink-2);margin:6px 0 0;font-size:.95rem}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:22px;margin-top:24px}
-  @media(max-width:760px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:20px}
-  label{display:block;font-size:.8rem;font-weight:600;color:var(--ink-2);margin:14px 0 5px}
-  label:first-child{margin-top:0}
-  input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:.95rem;background:#fff;color:var(--ink)}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .toggles{display:flex;gap:16px;margin-top:14px;font-size:.9rem}
-  .toggles label{display:flex;align-items:center;gap:7px;margin:0;font-weight:500}
-  .toggles input{width:auto}
-  button{margin-top:18px;width:100%;padding:12px;border:0;border-radius:9px;background:var(--teal);
-    color:#fff;font-size:.98rem;font-weight:600;cursor:pointer}
-  button:disabled{opacity:.55;cursor:progress}
-  .neo{margin-top:12px;padding:12px;background:var(--amber-wash);border-radius:9px;font-size:.83rem;color:#6b4a12;display:none}
-  .neo.show{display:block}
-  .hint{font-size:.75rem;color:var(--ink-3);margin-top:4px}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  a{color:var(--teal-deep)}
+  h1,h2,h3{margin:0}
+  ::selection{background:var(--teal-glow)}
 
-  #out{min-height:120px}
-  .placeholder{color:var(--ink-3);font-size:.92rem}
-  .steps{font-family:var(--mono);font-size:.78rem;color:var(--ink-2);background:#0f1c23;color:#cfe0dd;
-    border-radius:10px;padding:14px;margin-bottom:16px;white-space:pre-wrap;max-height:220px;overflow:auto;display:none}
-  .steps.show{display:block}
-  .dose{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line-2);padding-bottom:14px;margin-bottom:14px}
-  .dose .big{font-size:2rem;font-weight:700;color:var(--teal-deep)}
-  .dose .sub{color:var(--ink-2);font-size:.9rem}
-  .grade{font-family:var(--mono);font-weight:600;font-size:.9rem;padding:5px 12px;border-radius:8px}
+  /* ---------- views / router ---------- */
+  .view{display:none;animation:fade .5s ease both}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---------- top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:40;background:rgba(239,243,243,.82);
+    backdrop-filter:saturate(1.2) blur(10px);border-bottom:1px solid var(--line)}
+  .topbar .inner{max-width:1180px;margin:0 auto;padding:0 26px;height:60px;
+    display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:.8rem;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--teal-deep);cursor:pointer;font-weight:600;background:none;border:0}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px var(--teal-wash)}
+  .brand b{color:var(--ink)}
+  .topnav{display:flex;align-items:center;gap:8px}
+  .topnav .link{background:none;border:0;font:inherit;font-size:.85rem;color:var(--ink-2);cursor:pointer;padding:8px 12px;border-radius:8px}
+  .topnav .link:hover{color:var(--teal);background:var(--teal-wash)}
+  .btn{font:inherit;cursor:pointer;border:0;border-radius:10px;font-weight:600;
+    background:var(--teal);color:#fff;padding:10px 18px;font-size:.92rem;
+    box-shadow:0 6px 16px var(--teal-glow);transition:transform .12s,box-shadow .12s,background .12s}
+  .btn:hover{background:var(--teal-deep);transform:translateY(-1px);box-shadow:0 10px 24px var(--teal-glow)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{opacity:.55;cursor:progress;transform:none}
+  .btn.ghost{background:transparent;color:var(--teal-deep);box-shadow:none;border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--teal-wash)}
+
+  /* ================= LANDING ================= */
+  .land-wrap{max-width:1080px;margin:0 auto;padding:0 26px}
+  .hero{padding:84px 0 56px;position:relative}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin-bottom:20px}
+  .hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(2.6rem,6.6vw,4.7rem);
+    line-height:1.02;letter-spacing:-.018em;margin:0 0 24px;max-width:14ch}
+  .hero h1 em{font-style:italic;color:var(--teal-deep)}
+  .lede{font-size:1.24rem;line-height:1.55;color:var(--ink-2);max-width:620px;margin:0 0 34px}
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .hero-cta .note{font-size:.82rem;color:var(--ink-3)}
+  .metarow{display:flex;flex-wrap:wrap;gap:9px;margin-top:34px}
+  .chip{font-family:var(--mono);font-size:.72rem;letter-spacing:.03em;padding:6px 12px;
+    border:1px solid var(--line);border-radius:100px;background:var(--card);color:var(--ink-2)}
+  .chip.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+  /* the gap illustration */
+  .gap-card{margin:8px 0 0;background:var(--card);border:1px solid var(--line);border-radius:20px;
+    box-shadow:var(--shadow);padding:30px 30px 22px;overflow:hidden}
+  .gap-card h3{font-family:var(--serif);font-weight:500;font-size:1.5rem;margin-bottom:6px}
+  .gap-card p{color:var(--ink-2);font-size:.98rem;margin:0 0 14px;max-width:60ch}
+  .gap-legend{display:flex;gap:22px;font-size:.82rem;color:var(--ink-2);flex-wrap:wrap}
+  .gap-legend span{display:flex;align-items:center;gap:8px}
+  .swatch{width:22px;height:3px;border-radius:2px;display:inline-block}
+
+  .section{padding:56px 0;border-top:1px solid var(--line)}
+  .section h2{font-family:var(--serif);font-weight:500;font-size:clamp(1.7rem,3.4vw,2.4rem);letter-spacing:-.01em;margin-bottom:10px}
+  .section .sub{color:var(--ink-2);max-width:60ch;margin:0 0 30px;font-size:1.02rem}
+  .steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:820px){.steps3{grid-template-columns:1fr}}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow);position:relative}
+  .step .n{font-family:var(--mono);font-size:.74rem;color:var(--teal);letter-spacing:.1em}
+  .step h4{font-family:var(--serif);font-weight:500;font-size:1.28rem;margin:10px 0 8px}
+  .step p{color:var(--ink-2);font-size:.94rem;margin:0}
+  .formula{margin-top:26px;background:var(--console);color:var(--console-ink);border-radius:14px;
+    padding:20px 22px;font-family:var(--mono);font-size:.86rem;line-height:1.9;overflow-x:auto}
+  .formula .c{color:#7FB3A8}
+  .formula .k{color:#E7B76B}
+
+  .drug-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .drug{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .drug .name{font-weight:600;font-size:1.02rem}
+  .drug .path{font-family:var(--mono);font-size:.72rem;color:var(--teal-deep);letter-spacing:.03em;margin-top:2px}
+  .drug .edge{font-size:.85rem;color:var(--ink-2);margin-top:8px}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 70px}
+  .disclaimer{font-size:.82rem;color:var(--ink-3);max-width:70ch}
+
+  /* ================= CALCULATOR ================= */
+  .calc-shell{min-height:calc(100vh - 60px);display:flex;align-items:center;justify-content:center;padding:44px 26px}
+  .calc-card{width:100%;max-width:760px;background:var(--card);border:1px solid var(--line);
+    border-radius:22px;box-shadow:var(--shadow-lg);padding:38px clamp(24px,4vw,46px)}
+  .calc-card .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--teal)}
+  .calc-card h2{font-family:var(--serif);font-weight:500;font-size:2rem;letter-spacing:-.01em;margin:8px 0 4px}
+  .calc-card .intro{color:var(--ink-2);margin:0 0 26px;font-size:1rem}
+  label{display:block;font-size:.82rem;font-weight:600;color:var(--ink-2);margin:0 0 6px}
+  .field{margin-bottom:18px}
+  input,select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;
+    font-size:.98rem;font-family:inherit;background:#fff;color:var(--ink);transition:border .12s,box-shadow .12s}
+  input:focus,select:focus{outline:0;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-glow)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  .seg{display:flex;gap:8px}
+  .seg label{flex:1;margin:0}
+  .seg input{position:absolute;opacity:0;pointer-events:none}
+  .seg .opt{display:block;text-align:center;padding:11px;border:1px solid var(--line);border-radius:11px;
+    font-size:.92rem;font-weight:500;color:var(--ink-2);cursor:pointer;transition:.12s;background:#fff}
+  .seg input:checked + .opt{border-color:var(--teal);background:var(--teal-wash);color:var(--teal-deep)}
+  .toggles{display:flex;gap:12px;flex-wrap:wrap}
+  .toggle{flex:1;min-width:180px;display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--line);
+    border-radius:12px;cursor:pointer;background:#fff;font-size:.92rem;color:var(--ink-2);font-weight:500;transition:.12s}
+  .toggle:has(input:checked){border-color:var(--teal);background:var(--teal-wash);color:var(--teal-deep)}
+  .toggle input{width:18px;height:18px;accent-color:var(--teal);cursor:pointer}
+  .neo{margin-top:6px;padding:15px 16px;background:var(--amber-wash);border:1px solid #EBD9B4;border-radius:12px;
+    font-size:.86rem;color:#6b4a12;display:none}
+  .neo.show{display:block}
+  .neo strong{display:block;margin-bottom:8px}
+  .hint{font-size:.78rem;color:var(--ink-3);margin-top:6px}
+  .calc-card .go{width:100%;margin-top:26px;padding:15px;font-size:1.02rem}
+  .keyhint{font-family:var(--mono);font-size:.74rem;color:var(--ink-3);text-align:center;margin-top:14px}
+  .keyhint.warn{color:var(--amber)}
+
+  /* ================= LOADING ================= */
+  #view-loading.active{display:flex}
+  #view-loading{position:fixed;inset:0;z-index:60;flex-direction:column;
+    background:radial-gradient(1200px 700px at 50% -10%,#F4F8F7 0%,var(--paper) 55%,var(--paper-2) 100%)}
+  .load-inner{flex:1;width:100%;max-width:1160px;margin:0 auto;padding:34px 26px;display:grid;
+    grid-template-columns:1.1fr .9fr;gap:34px;align-items:center}
+  @media(max-width:900px){.load-inner{grid-template-columns:1fr;gap:22px;align-content:start;padding-top:26px}}
+  .load-left{min-width:0}
+  .load-kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--teal-glow)}50%{opacity:.5;box-shadow:0 0 0 8px transparent}}
+  .load-title{font-family:var(--serif);font-weight:500;font-size:clamp(1.8rem,4vw,2.7rem);line-height:1.08;letter-spacing:-.015em;margin-bottom:12px}
+  .load-title .dname{color:var(--teal-deep);font-style:italic}
+  .reassure{font-size:1.05rem;color:var(--ink-2);min-height:3.2em;margin-bottom:26px;transition:opacity .4s}
+  .stages{display:flex;flex-direction:column;gap:2px}
+  .stage{display:flex;align-items:center;gap:14px;padding:9px 0;color:var(--ink-3);font-size:.96rem;transition:.3s}
+  .stage .ic{width:30px;height:30px;flex:none;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:.3s}
+  .stage.active{color:var(--ink)}
+  .stage.active .ic{border-color:var(--teal);background:var(--teal-wash);animation:breathe 1.4s ease-in-out infinite}
+  .stage.done{color:var(--ink-2)}
+  .stage.done .ic{border-color:var(--teal);background:var(--teal);color:#fff}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 var(--teal-glow)}50%{box-shadow:0 0 0 7px transparent}}
+  .stage .lbl b{font-weight:600}
+  .stage .lbl small{display:block;font-size:.78rem;color:var(--ink-3)}
+
+  /* animated maturation-curve visual */
+  .load-right{display:flex;flex-direction:column;gap:18px;min-width:0}
+  .viz{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px}
+  .viz svg{width:100%;height:auto;display:block}
+  .viz .draw{stroke-dasharray:1000;stroke-dashoffset:1000;animation:draw 2.6s ease forwards}
+  .viz .draw.d2{animation-delay:.5s}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .viz .cap{margin-top:8px;font-size:.8rem;color:var(--ink-3);text-align:center}
+  .console{background:var(--console);border-radius:16px;box-shadow:var(--shadow);padding:16px 16px 8px;
+    font-family:var(--mono);font-size:.8rem;line-height:1.65;color:var(--console-ink);
+    height:230px;overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
+  .console::before{content:"";position:absolute;top:0;left:0;right:0;height:34px;
+    background:linear-gradient(var(--console),transparent);z-index:2;pointer-events:none}
+  .console .line{opacity:0;animation:cin .4s ease forwards;white-space:pre-wrap;word-break:break-word}
+  .console .line .arrow{color:var(--teal)}
+  .console .line.think{color:#8FB0AB}
+  @keyframes cin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .caret{display:inline-block;width:8px;height:1.05em;background:var(--teal);vertical-align:-2px;animation:blink 1s steps(1) infinite;margin-left:2px}
+  @keyframes blink{50%{opacity:0}}
+
+  /* ================= RESULT ================= */
+  .res-top{max-width:1180px;margin:0 auto;padding:22px 26px 0;display:flex;justify-content:space-between;align-items:center;gap:14px}
+  .res-top .case-sum{font-size:.92rem;color:var(--ink-2)}
+  .res-top .case-sum b{color:var(--ink)}
+  .res-grid{max-width:1180px;margin:0 auto;padding:18px 26px 70px;display:grid;grid-template-columns:1.55fr .95fr;gap:26px;align-items:start}
+  @media(max-width:980px){.res-grid{grid-template-columns:1fr}}
+  .res-main{min-width:0}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:26px clamp(20px,3vw,32px)}
+  .dose-hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px 22px;border-bottom:1px solid var(--line-2);padding-bottom:22px;margin-bottom:20px}
+  .dose-hero .big{font-family:var(--serif);font-weight:500;font-size:clamp(2.4rem,5vw,3.4rem);line-height:1;color:var(--teal-deep);letter-spacing:-.01em}
+  .dose-hero .big small{font-family:var(--sans);font-size:.9rem;font-weight:500;color:var(--ink-2);letter-spacing:0}
+  .dose-hero .metric{font-size:.92rem;color:var(--ink-2)}
+  .dose-hero .metric b{color:var(--ink);font-weight:600}
+  .grade{margin-left:auto;font-family:var(--mono);font-weight:600;font-size:1rem;padding:8px 16px;border-radius:11px;align-self:flex-start}
+  .grade .lab{display:block;font-size:.62rem;letter-spacing:.14em;opacity:.75}
   .grade.A{background:var(--teal-wash);color:var(--teal-deep)}
   .grade.B{background:#E7EEF6;color:#2b5580}
   .grade.C{background:var(--amber-wash);color:var(--amber)}
   .grade.D{background:var(--red-wash);color:var(--red)}
-  .sec{margin:16px 0}
-  .sec h3{font-size:.72rem;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
-  .flag{padding:9px 12px;border-radius:8px;background:var(--amber-wash);border-left:3px solid var(--amber);font-size:.88rem;margin:6px 0;color:#5f4310}
+  .sec{margin:24px 0}
+  .sec:first-child{margin-top:0}
+  .sec h3{font-size:.72rem;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .sec h3::after{content:"";flex:1;height:1px;background:var(--line-2)}
+  .flag{padding:11px 14px;border-radius:11px;background:var(--amber-wash);border-left:3px solid var(--amber);font-size:.9rem;margin:8px 0;color:#5f4310}
   .flag.stop{background:var(--red-wash);border-left-color:var(--red);color:#7a2a2a}
-  .conc{font-size:.9rem;padding:10px 12px;border-radius:8px;background:var(--teal-wash);color:var(--teal-deep)}
-  .cites li{font-size:.82rem;color:var(--ink-2);margin:4px 0}
-  .cites a{color:var(--teal-deep)}
-  .md{font-size:.92rem;color:var(--ink)}
-  .md p{margin:0 0 10px}
-  .err{background:var(--red-wash);color:#7a2a2a;padding:12px;border-radius:9px;font-size:.9rem}
-  .usage{font-family:var(--mono);font-size:.72rem;color:var(--ink-3);margin-top:14px}
-  .disclaimer{font-size:.78rem;color:var(--ink-3);margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
-  ul{margin:6px 0;padding-left:18px}
+  .conc{font-size:.94rem;padding:14px 16px;border-radius:12px;background:var(--teal-wash);color:var(--teal-deep)}
+  .conc.fail{background:var(--red-wash);color:#7a2a2a}
+  .conc .ratio{font-family:var(--mono);font-weight:600}
+  .md{font-size:.96rem;color:var(--ink);line-height:1.65}
+  .md p{margin:0 0 12px}.md p:last-child{margin:0}
+  .mech{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .mech .m{background:var(--paper);border:1px solid var(--line-2);border-radius:11px;padding:10px 13px}
+  .mech .m .k{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .mech .m .v{font-size:.92rem;color:var(--ink);margin-top:3px;font-weight:500}
+  .mech .m .v.empty{color:var(--ink-3);font-weight:400;font-style:italic}
+  ul.plain{margin:6px 0;padding-left:20px}ul.plain li{margin:5px 0;font-size:.93rem;color:var(--ink)}
+  .cites{list-style:none;margin:0;padding:0}
+  .cites li{font-size:.86rem;color:var(--ink-2);margin:9px 0;padding-left:16px;position:relative}
+  .cites li::before{content:"›";position:absolute;left:0;color:var(--teal)}
+  .cites b{color:var(--ink)}
+  .usage{font-family:var(--mono);font-size:.72rem;color:var(--ink-3);margin-top:18px;border-top:1px solid var(--line-2);padding-top:14px}
+
+  /* chat */
+  .chat{position:sticky;top:84px;display:flex;flex-direction:column;max-height:calc(100vh - 108px);
+    background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .chat-head{padding:16px 20px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px}
+  .chat-head .dot{width:8px;height:8px;border-radius:50%;background:var(--teal)}
+  .chat-head h3{font-family:var(--serif);font-weight:500;font-size:1.15rem}
+  .chat-head small{color:var(--ink-3);font-size:.78rem;display:block;font-family:var(--sans)}
+  .chat-body{flex:1;overflow-y:auto;padding:18px 18px 6px;display:flex;flex-direction:column;gap:12px;min-height:280px}
+  .msg{max-width:92%;padding:11px 14px;border-radius:14px;font-size:.9rem;line-height:1.55}
+  .msg.u{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:5px}
+  .msg.a{align-self:flex-start;background:var(--paper);border:1px solid var(--line-2);border-bottom-left-radius:5px;color:var(--ink)}
+  .msg.a .qh{font-weight:600;color:var(--teal-deep);margin-bottom:5px;font-size:.86rem}
+  .msg.a p{margin:0 0 8px}.msg.a p:last-child{margin:0}
+  .typing{display:inline-flex;gap:4px;align-items:center}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--ink-3);animation:td 1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+  @keyframes td{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;padding:10px 16px 4px}
+  .qchip{font:inherit;font-size:.8rem;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--teal-deep);
+    padding:6px 11px;border-radius:100px;transition:.12s}
+  .qchip:hover{background:var(--teal-wash);border-color:var(--teal)}
+  .chat-input{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line-2)}
+  .chat-input input{border-radius:12px}
+  .chat-input .send{padding:0 16px;border-radius:12px;flex:none}
+  .err{background:var(--red-wash);color:#7a2a2a;padding:14px;border-radius:12px;font-size:.92rem;margin:20px 0}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="tag">PaedScale · MVP</div>
-    <h1>Dosing children where the guidelines run out.</h1>
-    <p>Adult PK → pediatric starting dose via allometry × organ maturation, with cited rationale. Decision support, not a prescription.</p>
-  </header>
 
-  <div class="grid">
-    <form class="card" id="form">
-      <label>Drug</label>
-      <select id="drug">
-        <optgroup label="Stage 1 (archetypes)">
-          <option value="vancomycin">Vancomycin (renal / GFR · AUC, NTI→TDM)</option>
-          <option value="midazolam">Midazolam (CYP3A4)</option>
-          <option value="morphine">Morphine (UGT2B7 · active M6G)</option>
-        </optgroup>
-        <optgroup label="Stage 2">
-          <option value="gentamicin">Gentamicin (renal / GFR · Cmax/MIC, NTI→TDM)</option>
-          <option value="amikacin">Amikacin (renal / GFR · Cmax/MIC, NTI→TDM)</option>
-          <option value="ampicillin">Ampicillin (renal / GFR · time&gt;MIC)</option>
-          <option value="fentanyl">Fentanyl (CYP3A4 · potent)</option>
-          <option value="clindamycin">Clindamycin (CYP3A4)</option>
-        </optgroup>
-      </select>
-      <label>Indication</label>
-      <input id="indication" placeholder="e.g. sepsis, sedation, analgesia">
-      <div class="row">
-        <div><label>Age (years)</label><input id="age" type="number" step="0.01" value="6"></div>
-        <div><label>Weight (kg)</label><input id="weight" type="number" step="0.1" value="20"></div>
-      </div>
-      <div class="neo" id="neo">
-        <strong>Under 2 yr — maturation needs postmenstrual age.</strong>
-        <label>Gestational age at birth (weeks)</label>
-        <input id="ga" type="number" step="0.5" placeholder="40 = term; leave blank if unknown">
-        <div class="hint">Blank = assume term (40 wk). Preterm without this over-estimates the dose.</div>
-      </div>
-      <div class="toggles">
-        <label><input type="checkbox" id="renal"> Renal impairment</label>
-        <label><input type="checkbox" id="hepatic"> Hepatic impairment</label>
-      </div>
-      <button id="go" type="submit">Calculate dose</button>
-      <div class="hint" id="keyhint" style="margin-top:10px"></div>
-    </form>
-
-    <div class="card" id="out">
-      <div class="placeholder">Enter a case and calculate. The agent will show its reasoning, then a graded, cited recommendation.</div>
-    </div>
-  </div>
-
-  <div class="disclaimer">
-    PaedScale is a research prototype for a hackathon. Output is a defensible starting estimate for a qualified clinician,
-    not an autonomous order, and not a validated clinical-decision-support device. Narrow-therapeutic-index drugs require TDM.
+<!-- ================= TOP BAR ================= -->
+<div class="topbar">
+  <div class="inner">
+    <button class="brand" onclick="go('landing')"><span class="dot"></span><b>Paed</b>Scale</button>
+    <nav class="topnav">
+      <button class="link" onclick="go('landing');scrollTo(0,0)">How it works</button>
+      <button class="link" onclick="go('landing');document.getElementById('drugs').scrollIntoView()">Coverage</button>
+      <button class="btn" onclick="go('calc')">Calculate a dose</button>
+    </nav>
   </div>
 </div>
 
+<!-- ================= LANDING ================= -->
+<section id="view-landing" class="view active">
+  <div class="land-wrap">
+    <div class="hero">
+      <div class="eyebrow">Pediatric dose-extrapolation agent</div>
+      <h1>Dosing children where the <em>guidelines run out.</em></h1>
+      <p class="lede">PaedScale derives a defensible <b>starting</b> dose for a child from adult
+        pharmacokinetics — using allometry × organ maturation, with a cited, auditable rationale.
+        Decision support, not a prescription.</p>
+      <div class="hero-cta">
+        <button class="btn" onclick="go('calc')">Calculate a dose →</button>
+        <span class="note">Live retrieval from PubMed + openFDA on every query.</span>
+      </div>
+      <div class="metarow" id="metarow">
+        <span class="chip">Allometry · WT^0.75</span>
+        <span class="chip">Anderson–Holford maturation</span>
+        <span class="chip">Cite-or-abstain</span>
+        <span class="chip">Grades A → D</span>
+      </div>
+    </div>
+
+    <!-- the gap -->
+    <div class="gap-card">
+      <h3>The gap PaedScale encodes</h3>
+      <p>Drug clearance does not scale linearly with body size in early life — the organs that
+        eliminate the drug are still maturing. Scaling an adult dose by weight <em>over-doses the young.</em>
+        PaedScale models the distance between the naïve linear line and the true maturation curve.</p>
+      <svg viewBox="0 0 720 220" aria-hidden="true">
+        <defs><linearGradient id="gapfill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#0E7A6B" stop-opacity=".16"/><stop offset="1" stop-color="#0E7A6B" stop-opacity="0"/>
+        </linearGradient></defs>
+        <line x1="52" y1="188" x2="700" y2="188" stroke="#D5DFDF"/>
+        <line x1="52" y1="20" x2="52" y2="188" stroke="#D5DFDF"/>
+        <!-- naive linear -->
+        <line x1="52" y1="188" x2="680" y2="40" stroke="#B23A3A" stroke-width="2.5" stroke-dasharray="6 5"/>
+        <!-- true maturation (sigmoid-ish) -->
+        <path d="M52 188 C 210 186, 300 150, 400 96 S 560 46, 680 40" fill="none" stroke="#0E7A6B" stroke-width="3"/>
+        <path d="M52 188 C 210 186, 300 150, 400 96 S 560 46, 680 40 L 680 188 Z" fill="url(#gapfill)"/>
+        <text x="62" y="34" font-family="JetBrains Mono" font-size="12" fill="#B23A3A">naïve linear (over-doses)</text>
+        <text x="430" y="150" font-family="JetBrains Mono" font-size="12" fill="#0A564B">true maturation curve</text>
+        <text x="600" y="205" font-family="JetBrains Mono" font-size="11" fill="#6A828D">age / maturity →</text>
+        <text x="14" y="30" font-family="JetBrains Mono" font-size="11" fill="#6A828D" transform="rotate(-90 14 30)"></text>
+      </svg>
+      <div class="gap-legend">
+        <span><i class="swatch" style="background:#B23A3A"></i> Weight-linear scaling</span>
+        <span><i class="swatch" style="background:#0E7A6B"></i> Allometry × maturation (PaedScale)</span>
+        <span><i class="swatch" style="background:linear-gradient(#0E7A6B,rgba(14,122,107,.1))"></i> The over-dose gap</span>
+      </div>
+    </div>
+
+    <!-- how it works -->
+    <div class="section">
+      <h2>How the agent reasons</h2>
+      <p class="sub">Python does the arithmetic; Claude does the judgment — mapping the drug to its
+        elimination pathway and maturation curve, then writing the justification.</p>
+      <div class="steps3">
+        <div class="step"><div class="n">01 · MECHANISM</div><h4>Map the pathway</h4>
+          <p>Claude identifies elimination route, enzymes, transporters, active metabolites and protein
+             binding — and it is scored on getting them right, including correct-negatives.</p></div>
+        <div class="step"><div class="n">02 · RETRIEVE</div><h4>Live PK, or abstain</h4>
+          <p>A retrieval subagent scans PubMed (E-utilities) + openFDA for cited adult clearance and Vd.
+             No source, no confident number — it grades D instead of inventing one.</p></div>
+        <div class="step"><div class="n">03 · SCALE &amp; GRADE</div><h4>Compute &amp; concord</h4>
+          <p>The deterministic engine scales by allometry × maturation, then the estimate is checked
+             against a real pediatric guideline (0.67×–1.5×) and graded A → D.</p></div>
+      </div>
+      <div class="formula">
+        <span class="c"># per elimination pathway</span><br>
+        CL<span class="k">_child</span> = CL<span class="k">_adult</span> × (WT/70)<span class="k">^0.75</span> × MF(PMA) × OF<br>
+        MF(PMA)&nbsp;&nbsp;= PMA<span class="k">^H</span> / (TM50<span class="k">^H</span> + PMA<span class="k">^H</span>)&nbsp;&nbsp;<span class="c"># maturation, adult ≈ 1</span>
+      </div>
+    </div>
+
+    <!-- coverage -->
+    <div class="section" id="drugs">
+      <h2>Drug coverage</h2>
+      <p class="sub">Eight seeded drugs across three maturation curves and four exposure archetypes.
+        Each reuses an already-sourced ontogeny constant — cite-or-abstain holds.</p>
+      <div class="drug-grid" id="drug-grid"></div>
+    </div>
+
+    <footer>
+      <p class="disclaimer">PaedScale is a research prototype. Output is a defensible starting estimate for a
+        qualified clinician — not an autonomous order, and not a validated clinical-decision-support device.
+        Narrow-therapeutic-index drugs require therapeutic drug monitoring.</p>
+    </footer>
+  </div>
+</section>
+
+<!-- ================= CALCULATOR ================= -->
+<section id="view-calc" class="view">
+  <div class="calc-shell">
+    <form class="calc-card" id="form">
+      <div class="kicker">New case</div>
+      <h2>Dose a child</h2>
+      <p class="intro">Enter the patient and PaedScale will reason live to a graded, cited starting dose.</p>
+
+      <div class="field">
+        <label for="drug">Drug</label>
+        <select id="drug">
+          <optgroup label="Stage 1 — archetypes">
+            <option value="vancomycin">Vancomycin — renal / GFR · AUC, NTI→TDM</option>
+            <option value="midazolam">Midazolam — CYP3A4 · sedation</option>
+            <option value="morphine">Morphine — UGT2B7 · active M6G</option>
+          </optgroup>
+          <optgroup label="Stage 2">
+            <option value="gentamicin">Gentamicin — renal / GFR · Cmax/MIC, NTI→TDM</option>
+            <option value="amikacin">Amikacin — renal / GFR · Cmax/MIC, NTI→TDM</option>
+            <option value="ampicillin">Ampicillin — renal / GFR · time&gt;MIC</option>
+            <option value="fentanyl">Fentanyl — CYP3A4 · potent</option>
+            <option value="clindamycin">Clindamycin — CYP3A4</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="indication">Indication <span style="font-weight:400;color:var(--ink-3)">(optional)</span></label>
+        <input id="indication" placeholder="e.g. sepsis, sedation, analgesia">
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label for="age">Age (years)</label><input id="age" type="number" step="0.01" value="6"></div>
+        <div class="field"><label for="weight">Weight (kg)</label><input id="weight" type="number" step="0.1" value="20"></div>
+      </div>
+
+      <div class="neo" id="neo">
+        <strong>Under 2 yr — maturation needs postmenstrual age.</strong>
+        <label for="ga">Gestational age at birth (weeks)</label>
+        <input id="ga" type="number" step="0.5" placeholder="40 = term; leave blank if unknown">
+        <div class="hint">Blank = assume term (40 wk). A preterm infant dosed as term is over-estimated.</div>
+      </div>
+
+      <div class="field">
+        <label>Route</label>
+        <div class="seg">
+          <label><input type="radio" name="route" value="iv" checked><span class="opt">Intravenous</span></label>
+          <label><input type="radio" name="route" value="oral"><span class="opt">Oral</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Organ function</label>
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" id="renal"> Renal impairment</label>
+          <label class="toggle"><input type="checkbox" id="hepatic"> Hepatic impairment</label>
+        </div>
+      </div>
+
+      <button class="btn go" id="go" type="submit">Reason to a dose →</button>
+      <div class="keyhint" id="keyhint"></div>
+    </form>
+  </div>
+</section>
+
+<!-- ================= LOADING ================= -->
+<section id="view-loading" class="view">
+  <div class="load-inner">
+    <div class="load-left">
+      <div class="load-kicker"><span class="live-dot"></span> Agent reasoning · live</div>
+      <div class="load-title">Extrapolating <span class="dname" id="l-drug">a dose</span><br>from adult PK</div>
+      <p class="reassure" id="reassure">Warming up the pharmacometric engine…</p>
+      <div class="stages" id="stages">
+        <div class="stage" data-k="mechanism"><span class="ic">◇</span><span class="lbl"><b>Identify mechanism</b><small>elimination route · enzymes · metabolites</small></span></div>
+        <div class="stage" data-k="retrieve"><span class="ic">⚗</span><span class="lbl"><b>Fire retrieval subagent</b><small>live PubMed + openFDA for adult PK</small></span></div>
+        <div class="stage" data-k="compute"><span class="ic">∫</span><span class="lbl"><b>Scale by allometry × maturation</b><small>the deterministic engine</small></span></div>
+        <div class="stage" data-k="guideline"><span class="ic">§</span><span class="lbl"><b>Cross-check the guideline</b><small>concordance band 0.67× – 1.5×</small></span></div>
+        <div class="stage" data-k="grade"><span class="ic">✦</span><span class="lbl"><b>Grade &amp; write rationale</b><small>cited, auditable, A → D</small></span></div>
+      </div>
+    </div>
+    <div class="load-right">
+      <div class="viz">
+        <svg viewBox="0 0 320 180" aria-hidden="true">
+          <line x1="28" y1="150" x2="304" y2="150" stroke="#E5ECEC"/>
+          <line x1="28" y1="16" x2="28" y2="150" stroke="#E5ECEC"/>
+          <line class="draw d2" x1="28" y1="150" x2="292" y2="30" stroke="#B23A3A" stroke-width="2" stroke-dasharray="5 4"/>
+          <path class="draw" d="M28 150 C 110 149, 150 120, 190 80 S 260 32, 292 28" fill="none" stroke="#0E7A6B" stroke-width="2.5"/>
+          <circle cx="292" cy="28" r="4" fill="#0E7A6B"/>
+        </svg>
+        <div class="cap">naïve linear vs. maturation-corrected clearance</div>
+      </div>
+      <div class="console" id="console"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RESULT ================= -->
+<section id="view-result" class="view">
+  <div class="res-top">
+    <div class="case-sum" id="case-sum"></div>
+    <button class="btn ghost" onclick="go('calc')">＋ New calculation</button>
+  </div>
+  <div class="res-grid">
+    <div class="res-main" id="res-main"></div>
+    <aside>
+      <div class="chat">
+        <div class="chat-head"><span class="dot"></span><div><h3>Ask PaedScale</h3><small>Grounded in this recommendation</small></div></div>
+        <div class="chat-body" id="chat-body"></div>
+        <div class="chips" id="chat-chips"></div>
+        <form class="chat-input" id="chat-form">
+          <input id="chat-q" placeholder="Ask a follow-up…" autocomplete="off">
+          <button class="btn send" type="submit">Send</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+</section>
+
 <script>
 const $ = id => document.getElementById(id);
-const age = $("age"), neo = $("neo");
-function checkNeo(){ neo.classList.toggle("show", parseFloat(age.value) < 2); }
+
+/* ---------------- drug catalogue (for landing + display names) ---------------- */
+const DRUGS = {
+  vancomycin:{name:"Vancomycin",path:"renal / GFR · AUC",edge:"Narrow TI → recommend TDM"},
+  midazolam:{name:"Midazolam",path:"CYP3A4 · Css",edge:"High oral first-pass; titrate to sedation"},
+  morphine:{name:"Morphine",path:"UGT2B7 · Css",edge:"Active renally-cleared metabolite (M6G)"},
+  gentamicin:{name:"Gentamicin",path:"renal / GFR · Cmax/MIC",edge:"NTI → TDM; extend interval in the young"},
+  amikacin:{name:"Amikacin",path:"renal / GFR · Cmax/MIC",edge:"Same Cmax/MIC aminoglycoside archetype"},
+  ampicillin:{name:"Ampicillin",path:"renal / GFR · time>MIC",edge:"Daily-dose match is a proxy for fT>MIC"},
+  fentanyl:{name:"Fentanyl",path:"CYP3A4 · Css",edge:"Extreme potency (mcg dosing)"},
+  clindamycin:{name:"Clindamycin",path:"CYP3A4 · Css",edge:"Hepatic CYP3A4 antibiotic"},
+};
+(function fillDrugs(){
+  $("drug-grid").innerHTML = Object.values(DRUGS).map(d=>
+    `<div class="drug"><div class="name">${d.name}</div><div class="path">${d.path}</div><div class="edge">${d.edge}</div></div>`
+  ).join("");
+})();
+
+/* ---------------- router ---------------- */
+let currentCase = null, currentRec = null;
+function go(view){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  $("view-"+view).classList.add("active");
+  document.querySelector(".topbar").style.display = (view==="loading") ? "none" : "";
+  if(view!=="loading") window.scrollTo(0,0);
+}
+
+/* ---------------- neo (PMA) reveal ---------------- */
+const age = $("age");
+function checkNeo(){ $("neo").classList.toggle("show", parseFloat(age.value) < 2); }
 age.addEventListener("input", checkNeo); checkNeo();
 
+/* ---------------- health / key hint ---------------- */
 fetch("/health").then(r=>r.json()).then(h=>{
-  $("keyhint").textContent = h.has_api_key
-    ? `Model: ${h.model}` : "⚠ No API key set — add ANTHROPIC_API_KEY to backend/.env";
+  const el = $("keyhint");
+  if(h.has_api_key){ el.textContent = `Model · ${h.model}`; }
+  else { el.textContent = "⚠ No API key set — add ANTHROPIC_API_KEY to backend/.env"; el.classList.add("warn"); }
 }).catch(()=>{});
 
+/* ---------------- reassurance rotator ---------------- */
+const REASSURE = [
+  "Reading the child’s maturing organs off the allometric curve…",
+  "Clearance isn’t linear in the young — finding where the curves diverge…",
+  "Every PK value must be cited, or the agent abstains rather than guess…",
+  "Matching adult drug exposure to a body that eliminates it differently…",
+  "Almost there — grading the estimate against a real pediatric guideline…",
+];
+let reassureTimer=null, reassureIx=0;
+function startReassure(){
+  reassureIx=0; $("reassure").textContent = REASSURE[0];
+  reassureTimer = setInterval(()=>{
+    reassureIx = (reassureIx+1) % REASSURE.length;
+    const el = $("reassure"); el.style.opacity=0;
+    setTimeout(()=>{ el.textContent = REASSURE[reassureIx]; el.style.opacity=1; }, 380);
+  }, 4200);
+}
+function stopReassure(){ clearInterval(reassureTimer); }
+
+/* ---------------- stages ---------------- */
+const STAGE_ORDER = ["mechanism","retrieve","compute","guideline","grade"];
+function setStage(key, state){ // state: 'active' | 'done'
+  const el = document.querySelector(`.stage[data-k="${key}"]`);
+  if(!el) return;
+  el.classList.remove("active"); el.classList.add(state);
+  if(state==="active") el.querySelector(".ic").textContent = "…";
+}
+function advanceTo(key){
+  const target = STAGE_ORDER.indexOf(key);
+  STAGE_ORDER.forEach((k,i)=>{
+    const el = document.querySelector(`.stage[data-k="${k}"]`);
+    el.classList.remove("active","done");
+    if(i < target){ el.classList.add("done"); }
+    else if(i === target){ el.classList.add("active"); el.querySelector(".ic").textContent="…"; }
+  });
+}
+
+/* ---------------- console stream ---------------- */
+let caretEl = null;
+function pushLine(html, cls){
+  const c = $("console");
+  if(caretEl){ caretEl.remove(); caretEl=null; }
+  const div = document.createElement("div");
+  div.className = "line" + (cls?(" "+cls):"");
+  div.innerHTML = html;
+  c.appendChild(div);
+  // keep it lean: cap DOM lines
+  while(c.children.length > 40) c.removeChild(c.firstChild);
+  caretEl = document.createElement("span"); caretEl.className="caret";
+  div.appendChild(caretEl);
+  c.scrollTop = c.scrollHeight;
+}
+function esc(s){ return (s||"").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m])); }
+
+/* turn a raw backend step into a cutesy, human-readable console line + stage move */
+function handleStep(text){
+  const drugName = (DRUGS[currentCase.drug]||{}).name || currentCase.drug;
+  if(text.startsWith("→ retrieve_drug_data")){
+    advanceTo("retrieve");
+    pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);
+  } else if(text.startsWith("→ compute_pediatric_dose")){
+    advanceTo("compute");
+    pushLine(`<span class="arrow">∫ engine</span> — scaling adult PK by allometry × maturation…`);
+  } else if(text.startsWith("→ web_search")){
+    advanceTo("guideline");
+    const q = text.split("guideline")[1] || "";
+    pushLine(`<span class="arrow">§ guideline lookup</span> — finding the pediatric ${esc(drugName)} dose for concordance…`);
+  } else {
+    // genuine model reasoning text
+    const stages = document.querySelectorAll(".stage");
+    if(!document.querySelector(".stage.active") && !document.querySelector(".stage.done")) advanceTo("mechanism");
+    const t = text.length > 260 ? text.slice(0,260)+"…" : text;
+    pushLine(esc(t), "think");
+  }
+}
+
+/* ---------------- run the case (SSE stream) ---------------- */
 $("form").addEventListener("submit", async (e)=>{
   e.preventDefault();
-  const go = $("go"); go.disabled = true; go.textContent = "Reasoning…";
-  const out = $("out");
-  out.innerHTML = `<div class="steps show" id="steps">starting agent…</div>`;
+  const drug = $("drug").value;
   const payload = {
-    drug: $("drug").value,
+    drug,
     indication: $("indication").value || null,
     age_years: parseFloat(age.value),
     weight_kg: parseFloat($("weight").value),
     renal_impairment: $("renal").checked,
     hepatic_impairment: $("hepatic").checked,
+    route: document.querySelector('input[name="route"]:checked').value,
   };
   const ga = $("ga").value;
   if(parseFloat(age.value) < 2 && ga) payload.gestational_age_weeks = parseFloat(ga);
+  currentCase = payload;
+
+  // prep loading screen
+  $("console").innerHTML = "";
+  document.querySelectorAll(".stage").forEach(s=>{ s.classList.remove("active","done"); });
+  document.querySelectorAll(".stage .ic").forEach((ic,i)=>{ ic.textContent = ["◇","⚗","∫","§","✦"][i]; });
+  $("l-drug").textContent = (DRUGS[drug]||{}).name || drug;
+  go("loading"); startReassure();
+  advanceTo("mechanism");
+  pushLine(`<span class="arrow">◇ booting orchestrator</span> — case received: <b>${esc((DRUGS[drug]||{}).name||drug)}</b>, ${payload.age_years} yr · ${payload.weight_kg} kg`);
+
   try{
-    const res = await fetch("/calculate", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
-    const data = await res.json();
-    if(!res.ok){ out.innerHTML = `<div class="err">${data.detail || "error"}</div>`; return; }
-    render(data);
-  }catch(err){ out.innerHTML = `<div class="err">${err}</div>`; }
-  finally{ go.disabled = false; go.textContent = "Calculate dose"; }
+    const res = await fetch("/calculate/stream", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)
+    });
+    if(!res.ok){ const d = await res.json().catch(()=>({})); throw new Error(d.detail||("HTTP "+res.status)); }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let finished = false;
+    while(!finished){
+      const {value, done} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      let idx;
+      while((idx = buf.indexOf("\n\n")) >= 0){
+        const chunk = buf.slice(0, idx); buf = buf.slice(idx+2);
+        let ev="message", data="";
+        chunk.split("\n").forEach(l=>{
+          if(l.startsWith("event:")) ev = l.slice(6).trim();
+          else if(l.startsWith("data:")) data += l.slice(5).trim();
+        });
+        if(!data) continue;
+        const parsed = JSON.parse(data);
+        if(ev==="step"){ handleStep(parsed.text); }
+        else if(ev==="done"){ finished = true; await finishAndRender(parsed); }
+        else if(ev==="error"){ finished = true; showError(parsed.detail||"error"); }
+      }
+    }
+  }catch(err){ showError(err.message||String(err)); }
 });
 
-function render(data){
-  const r = data.recommendation, out = $("out");
-  const g = (r.grade||"D").toUpperCase();
+function showError(msg){
+  stopReassure();
+  go("result");
+  $("case-sum").textContent = "";
+  $("res-main").innerHTML = `<div class="panel"><div class="err"><b>Could not produce a recommendation.</b><br>${esc(msg)}</div>
+    <p style="color:var(--ink-2);font-size:.9rem">If this is a key/network issue, check that <code>ANTHROPIC_API_KEY</code> is set in <code>backend/.env</code> and that live PubMed/openFDA is reachable.</p></div>`;
+  $("chat-body").innerHTML=""; $("chat-chips").innerHTML="";
+}
+
+async function finishAndRender(data){
+  // let the "grade" stage light up briefly for polish
+  advanceTo("grade");
+  pushLine(`<span class="arrow">✦ done</span> — recommendation graded and cited.`);
+  await new Promise(r=>setTimeout(r, 650));
+  stopReassure();
+  renderResult(data);
+  go("result");
+}
+
+/* ---------------- render result ---------------- */
+function mdToHtml(s){ return "<p>"+ esc(s)
+  .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+  .replace(/\n\n+/g,"</p><p>").replace(/\n/g,"<br>") +"</p>"; }
+function linkify(s){ return esc(s).replace(/(https?:\/\/[^\s)]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>'); }
+function fmtList(a){ return (a&&a.length)? a.join(", ") : null; }
+
+function renderResult(data){
+  currentRec = data.recommendation || {};
+  const r = currentRec, g = (r.grade||"D").toUpperCase();
   const dpk = r.final_dose_mg_per_kg_per_day;
-  let h = "";
-  if(data.trace && data.trace.length){
-    h += `<div class="steps show">`+ data.trace.map(t=>"· "+t).join("\n") +`</div>`;
-  }
-  h += `<div class="dose">`;
-  h += dpk!=null ? `<span class="big">${dpk} <span class="sub">mg/kg/day</span></span>` : `<span class="big">—</span>`;
-  if(r.final_dose_mg_per_day!=null) h += `<span class="sub">≈ ${r.final_dose_mg_per_day} mg/day</span>`;
-  if(r.interval) h += `<span class="sub">${r.interval}</span>`;
-  if(r.route) h += `<span class="sub">${r.route}</span>`;
-  h += `<span class="grade ${g}" style="margin-left:auto">Grade ${g}</span></div>`;
-  if(r.grade_rationale) h += `<div class="md" style="color:var(--ink-2);font-size:.86rem">${r.grade_rationale}</div>`;
 
+  // case summary bar
+  const c = currentCase, dn = (DRUGS[c.drug]||{}).name||c.drug;
+  $("case-sum").innerHTML = `<b>${esc(dn)}</b> · ${c.age_years} yr · ${c.weight_kg} kg · ${esc(c.route)}`
+    + (c.indication?` · ${esc(c.indication)}`:"")
+    + (c.renal_impairment?` · renal impairment`:"") + (c.hepatic_impairment?` · hepatic impairment`:"");
+
+  let h = `<div class="panel">`;
+
+  // dose hero
+  h += `<div class="dose-hero">`;
+  h += dpk!=null ? `<div class="big">${dpk}<br><small>mg/kg/day</small></div>` : `<div class="big">—</div>`;
+  const metrics = [];
+  if(r.final_dose_mg_per_day!=null) metrics.push(`≈ <b>${r.final_dose_mg_per_day}</b> mg/day`);
+  if(r.interval) metrics.push(esc(r.interval));
+  if(r.route) metrics.push(esc(r.route));
+  if(metrics.length) h += `<div class="metric">${metrics.join("<br>")}</div>`;
+  h += `<div class="grade ${g}"><span class="lab">GRADE</span>${g}</div></div>`;
+  if(r.grade_rationale) h += `<div class="md" style="color:var(--ink-2);font-size:.92rem;margin-bottom:6px">${esc(r.grade_rationale)}</div>`;
+
+  // concordance
   if(r.concordance && (r.concordance.ratio!=null || r.concordance.verdict)){
-    const c = r.concordance;
-    h += `<div class="sec"><h3>Concordance check</h3><div class="conc">`;
-    if(c.guideline_dose_mg_per_kg_per_day!=null) h += `Guideline ${c.guideline_dose_mg_per_kg_per_day} mg/kg/day · `;
-    if(c.ratio!=null) h += `ratio ${c.ratio} · `;
-    h += `${c.verdict||""} ${c.source? "· "+c.source:""}</div></div>`;
+    const cc = r.concordance, fail = /fail|discord/i.test(cc.verdict||"");
+    h += `<div class="sec"><h3>Concordance check</h3><div class="conc ${fail?"fail":""}">`;
+    const bits=[];
+    if(cc.guideline_dose_mg_per_kg_per_day!=null) bits.push(`Guideline <b>${cc.guideline_dose_mg_per_kg_per_day}</b> mg/kg/day`);
+    if(cc.ratio!=null) bits.push(`ratio <span class="ratio">${cc.ratio}×</span>`);
+    if(cc.verdict) bits.push(esc(cc.verdict));
+    h += bits.join(" · ");
+    if(cc.source) h += `<br><span style="font-size:.82rem;opacity:.85">${linkify(cc.source)}</span>`;
+    h += `</div></div>`;
   }
 
-  const flags = (r.flags||[]);
+  // flags
+  const flags = r.flags||[];
   if(flags.length){
     h += `<div class="sec"><h3>Flags &amp; warnings</h3>`;
-    flags.forEach(f=>{ const stop = /exceed|toxic|do not|below|sub-therapeutic/i.test(f);
-      h += `<div class="flag ${stop?"stop":""}">${f}</div>`; });
+    flags.forEach(f=>{ const stop=/exceed|toxic|do not|below|sub-therapeutic|safety stop/i.test(f);
+      h += `<div class="flag ${stop?"stop":""}">${esc(f)}</div>`; });
     h += `</div>`;
   }
+
+  // rationale
   if(r.rationale) h += `<div class="sec"><h3>Rationale</h3><div class="md">${mdToHtml(r.rationale)}</div></div>`;
-  if(r.assumptions && r.assumptions.length){
-    h += `<div class="sec"><h3>Assumptions</h3><ul>`+ r.assumptions.map(a=>`<li>${a}</li>`).join("") +`</ul></div>`;
+
+  // mechanism
+  if(r.mechanism){
+    const m = r.mechanism;
+    const cell=(k,v,isList)=>{
+      let val = isList ? (v&&v.length? esc(v.join(", ")) : "none") : (v!=null&&v!==""? esc(String(v)) : "—");
+      const empty = isList ? !(v&&v.length) : (v==null||v==="");
+      return `<div class="m"><div class="k">${k}</div><div class="v ${empty?"empty":""}">${val}</div></div>`;
+    };
+    h += `<div class="sec"><h3>Mechanism</h3><div class="mech">`;
+    h += cell("Elimination", m.elimination, false);
+    h += cell("Pathways", m.pathways, true);
+    h += cell("Enzymes", m.enzymes, true);
+    h += cell("Transporters", m.transporters, true);
+    h += cell("Active metabolites", m.active_metabolites, true);
+    h += cell("Protein binding", m.protein_binding_percent!=null?(m.protein_binding_percent+"%"):null, false);
+    h += `</div></div>`;
   }
-  if(r.uncertainty) h += `<div class="sec"><h3>Uncertainty</h3><div class="md" style="font-size:.88rem">${r.uncertainty}</div></div>`;
+
+  // assumptions
+  if(r.assumptions && r.assumptions.length){
+    h += `<div class="sec"><h3>Assumptions</h3><ul class="plain">`+ r.assumptions.map(a=>`<li>${esc(a)}</li>`).join("") +`</ul></div>`;
+  }
+  // uncertainty
+  if(r.uncertainty) h += `<div class="sec"><h3>Uncertainty</h3><div class="md" style="font-size:.9rem;color:var(--ink-2)">${esc(r.uncertainty)}</div></div>`;
+  // citations
   if(r.citations && r.citations.length){
     h += `<div class="sec"><h3>Citations</h3><ul class="cites">`+
-      r.citations.map(c=>`<li><strong>${c.claim||""}</strong> — ${linkify(c.source||"")}</li>`).join("") +`</ul></div>`;
+      r.citations.map(ci=>`<li><b>${esc(ci.claim||"")}</b> — ${linkify(ci.source||"")}</li>`).join("") +`</ul></div>`;
   }
-  if(data.usage) h += `<div class="usage">${data.usage.model} · in ${data.usage.input_tokens} / out ${data.usage.output_tokens} tok</div>`;
-  out.innerHTML = h;
+  // usage
+  if(data.usage){
+    const u=data.usage;
+    h += `<div class="usage">${esc(u.model||"")} · in ${u.input_tokens} / out ${u.output_tokens} tok`
+       + (u.retrieval_model?` · retrieval ${esc(u.retrieval_model)} (${u.retrieval_input_tokens}/${u.retrieval_output_tokens})`:"") + `</div>`;
+  }
+  h += `</div>`; // panel
+
+  $("res-main").innerHTML = h;
+  buildChat(r);
 }
-function mdToHtml(s){ return "<p>"+ s.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\n\n+/g,"</p><p>").replace(/\n/g,"<br>") +"</p>"; }
-function linkify(s){ return s.replace(/(https?:\/\/[^\s)]+)/g,'<a href="$1" target="_blank">$1</a>'); }
+
+/* ---------------- chat: preloaded Q&A + live follow-ups ---------------- */
+let chatHistory = [];
+function addMsg(role, html, isPreloadQ){
+  const body = $("chat-body");
+  const div = document.createElement("div");
+  div.className = "msg " + (role==="user"?"u":"a");
+  div.innerHTML = html;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+  return div;
+}
+function paras(s){ return (s||"").split(/\n\n+/).map(p=>`<p>${esc(p).replace(/\n/g,"<br>")}</p>`).join(""); }
+
+function buildChat(r){
+  $("chat-body").innerHTML = ""; chatHistory = [];
+  const g = (r.grade||"D").toUpperCase();
+  const dpk = r.final_dose_mg_per_kg_per_day;
+
+  // greeting
+  addMsg("assistant", `<p>Here's your <b>Grade ${g}</b> recommendation${dpk!=null?` — <b>${dpk} mg/kg/day</b>`:""}. I've answered a few common questions below; ask me anything else.</p>`);
+
+  // build preloaded Q&A from the recommendation itself (no extra API cost)
+  const pre = [];
+  if(r.grade_rationale) pre.push(["Why did this earn a Grade "+g+"?", r.grade_rationale]);
+  if(r.concordance && (r.concordance.verdict || r.concordance.ratio!=null)){
+    const cc=r.concordance; let a = cc.verdict||"";
+    if(cc.ratio!=null) a += ` The estimate sits at ${cc.ratio}× the guideline (concordance band 0.67×–1.5×).`;
+    if(cc.guideline_dose_mg_per_kg_per_day!=null) a += ` Guideline ≈ ${cc.guideline_dose_mg_per_kg_per_day} mg/kg/day.`;
+    if(cc.source) a += ` Source: ${cc.source}.`;
+    pre.push(["How does this compare to the guideline?", a.trim()]);
+  }
+  if(r.flags && r.flags.length) pre.push(["What safety flags should I watch?", "• " + r.flags.join("\n• ")]);
+  if(r.assumptions && r.assumptions.length) pre.push(["What assumptions is this resting on?", "• " + r.assumptions.join("\n• ")]);
+
+  pre.slice(0,4).forEach(([q,a])=>{
+    addMsg("assistant", `<div class="qh">${esc(q)}</div>${paras(a)}`);
+  });
+
+  // suggestion chips for live questions
+  const chips = [
+    "Why not just scale the adult dose by weight?",
+    "What would change this from Grade "+g+"?",
+    r.mechanism && r.mechanism.active_metabolites && r.mechanism.active_metabolites.length ? "Why do the active metabolites matter?" : "How confident are you in the retrieved PK?",
+    "How should I monitor this patient?",
+  ];
+  $("chat-chips").innerHTML = chips.map(q=>`<button class="qchip" type="button">${esc(q)}</button>`).join("");
+  $("chat-chips").querySelectorAll(".qchip").forEach(b=>b.addEventListener("click",()=>askChat(b.textContent)));
+}
+
+async function askChat(q){
+  if(!q || !q.trim()) return;
+  $("chat-q").value = "";
+  addMsg("user", esc(q));
+  chatHistory.push({role:"user", content:q});
+  const typing = addMsg("assistant", `<span class="typing"><i></i><i></i><i></i></span>`);
+  try{
+    const res = await fetch("/chat", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({question:q, case:currentCase, recommendation:currentRec, history:chatHistory.slice(0,-1)})});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail||"error");
+    typing.innerHTML = paras(data.answer);
+    chatHistory.push({role:"assistant", content:data.answer});
+  }catch(err){
+    typing.innerHTML = `<p style="color:var(--red)">Couldn’t answer: ${esc(err.message||String(err))}</p>`;
+  }
+  $("chat-body").scrollTop = $("chat-body").scrollHeight;
+}
+$("chat-form").addEventListener("submit", e=>{ e.preventDefault(); askChat($("chat-q").value); });
 </script>
 </body>
 </html>

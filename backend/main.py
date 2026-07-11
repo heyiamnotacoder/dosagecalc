@@ -12,17 +12,23 @@ from __future__ import annotations
 
 import json
 import os
+import queue
+import threading
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 load_dotenv()  # pulls ANTHROPIC_API_KEY from backend/.env
 
-from agent import run_case  # noqa: E402  (after load_dotenv)
+from agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402  (after load_dotenv)
 from pk_engine import compute_pediatric_dose, result_to_dict  # noqa: E402
+
+# Chat follow-ups are a single cheap call; default to the orchestrator model so it always works,
+# override with CHAT_MODEL (e.g. claude-sonnet-5) to make them cheaper/faster.
+CHAT_MODEL = os.environ.get("CHAT_MODEL", ORCHESTRATOR_MODEL)
 
 app = FastAPI(title="PaedScale", version="0.2-mvp")
 app.add_middleware(
@@ -75,6 +81,112 @@ def calculate(case: Case):
     if result.get("recommendation") is None:
         raise HTTPException(502, result.get("error", "no recommendation produced"))
     return result
+
+
+@app.post("/calculate/stream")
+def calculate_stream(case: Case):
+    """Same pipeline as /calculate, but streams the agent's reasoning as it happens.
+
+    Server-Sent Events: `step` events carry one-line reasoning/tool traces as they occur,
+    then a single `done` event carries the full result JSON (or an `error` event on failure).
+    The frontend reads this to drive the live loading screen.
+    """
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise HTTPException(400, "ANTHROPIC_API_KEY not set. Add it to backend/.env")
+
+    q: queue.Queue = queue.Queue()
+    _END = object()
+
+    def on_step(text: str) -> None:
+        q.put(("step", text))
+
+    def worker() -> None:
+        try:
+            result = run_case(case.model_dump(), on_step=on_step)
+            if result.get("recommendation") is None:
+                q.put(("error", result.get("error", "no recommendation produced")))
+            else:
+                q.put(("done", result))
+        except Exception as e:  # surface any pipeline failure to the client stream
+            q.put(("error", str(e)))
+        finally:
+            q.put((_END, None))
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def event_stream():
+        while True:
+            kind, payload = q.get()
+            if kind is _END:
+                break
+            if kind == "step":
+                yield f"event: step\ndata: {json.dumps({'text': payload})}\n\n"
+            elif kind == "done":
+                yield f"event: done\ndata: {json.dumps(payload)}\n\n"
+            elif kind == "error":
+                yield f"event: error\ndata: {json.dumps({'detail': payload})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+class ChatTurn(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    question: str
+    case: dict | None = None
+    recommendation: dict | None = None
+    history: list[ChatTurn] = []
+
+
+CHAT_SYSTEM = """You are PaedScale, answering a clinician's follow-up about a pediatric
+dose recommendation you already produced. You are decision support, NOT a prescriber.
+
+Ground every answer in the provided recommendation JSON (grade, mechanism, concordance,
+flags, citations, assumptions, uncertainty) and the case. Be concise and clinically precise.
+If the question asks for something not supported by the provided data, say so plainly rather
+than inventing PK values — cite-or-abstain still holds. Never restate a dose as an order.
+Use short paragraphs or tight bullet lists. Plain text / light markdown only."""
+
+
+@app.post("/chat")
+def chat(req: ChatRequest):
+    """Follow-up Q&A grounded in an already-produced recommendation. One cheap call, no tools."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise HTTPException(400, "ANTHROPIC_API_KEY not set. Add it to backend/.env")
+    from anthropic import Anthropic
+
+    context = json.dumps({"case": req.case, "recommendation": req.recommendation}, default=str)
+    messages = [{
+        "role": "user",
+        "content": (
+            "Here is the case and the recommendation you produced. Use it to answer my "
+            f"follow-up questions.\n\n{context}"
+        ),
+    }, {
+        "role": "assistant",
+        "content": "Understood — I have the recommendation in front of me. What would you like to know?",
+    }]
+    for turn in req.history:
+        if turn.role in ("user", "assistant") and turn.content.strip():
+            messages.append({"role": turn.role, "content": turn.content})
+    messages.append({"role": "user", "content": req.question})
+
+    client = Anthropic()
+    resp = client.messages.create(
+        model=CHAT_MODEL, max_tokens=900, system=CHAT_SYSTEM, messages=messages,
+    )
+    answer = "".join(b.text for b in resp.content if b.type == "text").strip()
+    return {"answer": answer,
+            "usage": {"model": CHAT_MODEL,
+                      "input_tokens": resp.usage.input_tokens,
+                      "output_tokens": resp.usage.output_tokens}}
 
 
 @app.post("/pk")

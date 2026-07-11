@@ -232,6 +232,14 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                     on_step(block.text.strip())
             elif block.type == "tool_use":
                 tool_uses.append(block)
+            elif block.type == "server_tool_use" and getattr(block, "name", "") == "web_search":
+                # web_search runs API-side (no local handler), so surface it here for the UI:
+                # this is the pediatric-guideline lookup for the concordance check.
+                q = ""
+                if isinstance(getattr(block, "input", None), dict):
+                    q = block.input.get("query", "")
+                if on_step:
+                    on_step(f"→ web_search — finding pediatric guideline{(': ' + q) if q else ' …'}")
 
         messages.append({"role": "assistant", "content": resp.content})
 

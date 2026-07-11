@@ -8,10 +8,10 @@ The concept brief is `concept.html`; the product spec is `PRD.md`. This file is 
 engineering source of truth. `AGENT.md` holds the short version and routes here.
 
 ## RULES:
-If you want to check browser use browser harness first. if allow external debugging is not enabled ask user to do it. It is more token efficient.
-If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
-read handoff saved at /private/tmp/
-
+1. If you want to check browser use browser harness first. if allow external debugging is not enabled ask user to do it. It is more token efficient.
+  If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
+2. read handoff saved at /private/tmp/
+3. Read Checklist.md for any task remaining and ask user if he want to continue remaining tasks. Also if the work is too long rather than saving work in plan.md use checklist.md for it.
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that
 eliminate the drug are still maturing. Scaling an adult dose by weight over-doses the young.

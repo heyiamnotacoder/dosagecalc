@@ -33,7 +33,16 @@ Pipeline (lean):
 4. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
 5. web_search pediatric guideline → concordance 0.67×–1.5× (none → grade B).
 6. Grade A/B/C/D; flag NTI→TDM, metabolites, oral-F, assumed-term, exposure-matching PD assumption.
-7. submit_recommendation once, last. Lean reasoning. Flag toxic/sub-therapeutic doses."""
+7. submit_recommendation once, last. Lean reasoning. Flag toxic/sub-therapeutic doses.
+
+Engine vs guideline (validated limits — act on them):
+- Cmax aminoglycosides: allometry×adult-Vd often UNDERdoses children; if engine ≪ published
+  pediatric peak/extended-interval dose, prefer the guideline STARTING dose, flag exposure-target
+  mismatch + TDM, grade ceiling B.
+- time_mic β-lactams: daily-dose match is a PROXY for fT>MIC — guideline-anchor interval/infusion;
+  flag proxy; grade ceiling B.
+- Michaelis–Menten / null adult CL (e.g. phenytoin): do NOT invent linear CL; guideline-only or D.
+- Titration drugs with no adult mg/day: no false precision; guideline/titrate language, not fake CSS."""
 
 TOOLS = [
     {

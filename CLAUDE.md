@@ -121,8 +121,16 @@ Grades: **A** passes concordance vs a real guideline · **B** solid PK, no guide
 - **PMA for under-2s.** If unknown, assume term AND surface that assumption.
 - **Safety bounds.** Never present a dose above toxic / below effective without a prominent flag.
 - **NTI drugs (vancomycin, aminoglycosides) recommend TDM**; **active metabolites (M6G) flagged.**
-- **Known engine limit:** allometry×Cmax **underdoses concentration-dependent aminoglycosides** —
-  the agent must guideline-anchor and flag the exposure-target mismatch (verified on gentamicin).
+- **Known engine limits** (validation `result_eval.md` on `validation-eval`; engine kept as-is):
+  - allometry×Cmax **underdoses concentration-dependent aminoglycosides** — agent must
+    guideline-anchor + flag exposure-target mismatch + TDM (verified gentamicin/amikacin).
+  - **time_mic** daily-dose match is a **proxy** for fT>MIC — grade ceiling B; interval/infusion matters.
+  - **Michaelis–Menten** drugs (phenytoin): no linear CL invent; guideline-only or abstain.
+  - **Titration** drugs without adult mg/day (midazolam/fentanyl): no false absolute dose.
+  - Pediatric CL may exceed adult allometry for some drugs (e.g. fluconazole) — flag discordance.
+  - Obesity: flag only; do not silently rewrite weight in the engine.
+- **Validation branch:** `validation-eval` + `validation_set/` + `result_eval.md` / `results.csv`
+  are harness-only — **never merge that branch to master**; product path never imports them.
 
 ## Run
 ```bash

@@ -116,6 +116,13 @@ def append_result(rows: list[dict]) -> None:
             dims = {k: v for k, v in ms.items() if k != "overall"}
             lines.append(f"- **Mechanism score:** {ms.get('overall')} · dims: `{dims}`\n")
         lines.append(f"- **Citations:** {r.get('citations_n')} · rationale: {r.get('has_rationale')}\n")
+        u = r.get("usage") or {}
+        if u:
+            lines.append(
+                f"- **Tokens:** orch in={u.get('input_tokens', 0)} out={u.get('output_tokens', 0)} "
+                f"cache_read={u.get('cache_read_input_tokens', 0)} "
+                f"| retr in={u.get('retrieval_input_tokens', 0)} out={u.get('retrieval_output_tokens', 0)}\n"
+            )
         if r.get("flags"):
             lines.append("- **Flags:**\n")
             for f in r["flags"][:12]:
@@ -125,6 +132,29 @@ def append_result(rows: list[dict]) -> None:
             lines.append(f"- **Grade rationale:** {g['grade_rationale'][:400]}\n")
     prev = RESULT.read_text() if RESULT.exists() else ""
     RESULT.write_text(prev + "".join(lines))
+
+
+USAGE_LOG = VSET / "usage_log.jsonl"
+
+
+def _tok_totals(rows: list[dict]) -> dict:
+    t = {
+        "orch_in": 0, "orch_out": 0, "cache_read": 0, "cache_write": 0,
+        "retr_in": 0, "retr_out": 0, "cases": 0,
+    }
+    for r in rows:
+        u = r.get("usage") or {}
+        t["orch_in"] += int(u.get("input_tokens") or 0)
+        t["orch_out"] += int(u.get("output_tokens") or 0)
+        t["cache_read"] += int(u.get("cache_read_input_tokens") or 0)
+        t["cache_write"] += int(u.get("cache_creation_input_tokens") or 0)
+        t["retr_in"] += int(u.get("retrieval_input_tokens") or 0)
+        t["retr_out"] += int(u.get("retrieval_output_tokens") or 0)
+        t["cases"] += 1
+    t["total_in"] = t["orch_in"] + t["retr_in"]
+    t["total_out"] = t["orch_out"] + t["retr_out"]
+    t["total"] = t["total_in"] + t["total_out"]
+    return t
 
 
 def main():
@@ -149,20 +179,40 @@ def main():
                     "recommendation": {},
                 }
             all_rows.append(row)
+            u = row.get("usage") or {}
+            tok = (
+                int(u.get("input_tokens") or 0)
+                + int(u.get("output_tokens") or 0)
+                + int(u.get("retrieval_input_tokens") or 0)
+                + int(u.get("retrieval_output_tokens") or 0)
+            )
             print(
                 f"  → grade={row.get('grade')} dose={row.get('dose_mg_per_kg_per_day')} "
-                f"ratio={row['concordance'].get('ratio')} t={row['seconds']}s",
+                f"ratio={row['concordance'].get('ratio')} t={row['seconds']}s tok={tok}",
                 flush=True,
             )
             append_result([row])
+            with USAGE_LOG.open("a") as uf:
+                uf.write(json.dumps({
+                    "drug": drug, "scenario": sk, "usage": u,
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                }) + "\n")
     # summary block
+    totals = _tok_totals(all_rows)
     with RESULT.open("a") as f:
-        f.write("\n### Batch summary\n")
+        f.write(f"\n### Batch summary ({', '.join(drugs)})\n")
         n = len(all_rows)
         s = sum(1 for r in all_rows if r["concordance"].get("in_0.67_1.5"))
         w = sum(1 for r in all_rows if r["concordance"].get("in_0.5_2"))
         f.write(f"- n={n} · within 0.67–1.5×: {s}/{n} · within 0.5–2×: {w}/{n}\n")
+        f.write(
+            f"- **Tokens this batch:** orch in/out {totals['orch_in']}/{totals['orch_out']} "
+            f"(cache_read {totals['cache_read']}) · retrieval in/out "
+            f"{totals['retr_in']}/{totals['retr_out']} · **total {totals['total']:,}**\n"
+        )
         f.write(f"- finished {datetime.now(timezone.utc).isoformat()}\n")
+    print("\n=== TOKEN TOTALS (this batch) ===")
+    print(json.dumps(totals, indent=2))
     print("\nWrote", RESULT)
 
 

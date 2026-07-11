@@ -173,3 +173,182 @@ Starting batch: **vancomycin, midazolam, morphine** × 3 scenarios (9 cases).
 ### After ≥3 drugs — pause for user
 Next drugs candidates: gentamicin, ampicillin, caffeine (diverse pathways).  
 Subagents only after user OK (~5–6 drugs).
+
+## gentamicin · `neonate_5d`
+- **Grade:** B · **Dose:** 5 mg/kg/day · **105.4s**
+- **Concordance:** guideline 4 · ratio 1.25 · 0.67–1.5×: PASS · 0.5–2×: PASS
+- **Mechanism score:** 0.8333333333333334 · dims: `{'elimination': True, 'pathways': True, 'enzymes': True, 'transporters': False, 'active_metabolites': True, 'protein_binding': True}`
+- **Citations:** 5 · rationale: True
+- **Tokens:** orch in=8 out=4478 cache_read=19332 | retr in=8 out=2701
+- **Flags:**
+  - NTI aminoglycoside -> mandatory TDM (peak and trough after first dose); adjust interval to keep trough <1-2 mg/L
+  - Cmax:MIC-driven (target peak ~8-12 mg/L neonate) -> peak-optimized extended-interval dosing
+  - ENGINE UNDERESTIMATE OVERRIDDEN: engine 3 mg/kg/day q8h scaled Vd by adult size only (0.25 L/kg); neonatal Vd ~0.4-0.5 L/kg -> raw engine dose sub-therapeutic peak; dose raised to guideline 5 mg/kg/day and interval extended to q24h
+  - Immature neonatal GFR (maturation factor ~0.37, t1/2 ~3.2 h) -> extended q24h interval for adequate trough clearance
+  - 10% of clearance non-renal/unattributed to a maturing pathway (scaled by size only) - minor source of error
+  - Assumed term (GA 40w) with normal renal function per case
+  - Nephrotoxicity/ototoxicity risk -> monitor renal function and troughs
+  - Exposure/PD matching assumption: neonatal peak target (~8-12 mg/L) not identical to adult
+- **Grade rationale:** n/a
+
+## gentamicin · `child_2y_egfr85`
+- **Grade:** C · **Dose:** 3.0 mg/kg/day · **52.7s**
+- **Concordance:** guideline 5.5 · ratio 0.545 · 0.67–1.5×: FAIL · 0.5–2×: PASS
+- **Mechanism score:** 0.8333333333333334 · dims: `{'elimination': True, 'pathways': True, 'enzymes': True, 'transporters': False, 'active_metabolites': True, 'protein_binding': True}`
+- **Citations:** 6 · rationale: True
+- **Tokens:** orch in=8 out=3965 cache_read=19114 | retr in=0 out=0
+- **Flags:**
+  - NTI drug — mandatory TDM: measure peak (Cmax:MIC >=10) and trough; adjust dose and interval to levels.
+  - RENAL impairment flagged — organ-function modifier applied to renal pathway; LENGTHEN interval and monitor renal function, auditory/vestibular function.
+  - Sub-therapeutic risk: engine dose (3 mg/kg/day divided) is below the modern once-daily guideline band (~0.43×); consider up-titration toward 5-7 mg/kg once daily per PD (Cmax:MIC) target, guided by TDM.
+  - Peak-driven (Cmax) drug — extended-interval (once-daily) dosing preferred over divided dosing.
+  - Exposure/PD assumption: dose matched on adult exposure surrogate (Vd ratio); assumes pediatric Cmax:MIC target equals adult.
+  - Toxic dose threshold not quantifiable in mg/kg/day — nephro-/ototoxicity monitored via trough levels, not a fixed daily cap.
+- **Grade rationale:** PK from cache (not live), core renal PK is high-confidence. Engine dose (3 mg/kg/day) is anchored to the conservative divided-dose reference and falls BELOW the guideline concordance band (~0.43× of a ~7 mg/kg/day once-daily guideline midpoint), so it is potentially sub-therapeutic by peak-driven (Cmax:MIC) standards. NTI drug in a renally-impaired child mandates TDM. Discordance + cache source + 
+
+## gentamicin · `obese_1y_14kg`
+- **Grade:** C · **Dose:** 7 mg/kg/day · **57.8s**
+- **Concordance:** guideline 7 · ratio 1.0 · 0.67–1.5×: PASS · 0.5–2×: PASS
+- **Mechanism score:** 0.8333333333333334 · dims: `{'elimination': True, 'pathways': True, 'enzymes': True, 'transporters': False, 'active_metabolites': True, 'protein_binding': True}`
+- **Citations:** 5 · rationale: True
+- **Tokens:** orch in=10 out=4212 cache_read=35276 | retr in=0 out=0
+- **Flags:**
+  - NARROW THERAPEUTIC INDEX aminoglycoside — TDM MANDATORY (peak for efficacy, trough <1–2 mg/L for nephro/ototoxicity avoidance).
+  - ENGINE-GUIDELINE DISCORDANCE: engine 3 mg/kg/day is subtherapeutic; final dose overridden to guideline range (~7 mg/kg/day).
+  - Vd underestimation risk: infants have larger weight-normalized Vd than adults; peak-driven dosing requires higher mg/kg than size-scaling predicts.
+  - HIGH WEIGHT-FOR-AGE (14 kg at 1 yr vs ~10 kg ideal) — consider adjusted/ideal body weight for dosing to avoid overexposure; confirm with TDM.
+  - Assumed TERM gestation — PMA not supplied.
+  - Nephro-/ototoxicity monitoring required; ensure adequate hydration and avoid concomitant nephrotoxins.
+- **Grade rationale:** Core PK is high-confidence (renal elimination, GFR maturation well-characterized), but the deterministic engine dose (3 mg/kg/day, matched on adult Vd ratio) is discordant with and ~2.4x below well-established pediatric guidelines. The engine under-predicts because it scales the peak-driving Vd by size, whereas infants have a LARGER weight-normalized Vd than adults — the exact failure mode documen
+
+## ampicillin · `neonate_5d`
+- **Grade:** B · **Dose:** 200 mg/kg/day · **99.5s**
+- **Concordance:** guideline 100 · ratio 2.0 · 0.67–1.5×: FAIL · 0.5–2×: PASS
+- **Mechanism score:** 0.8333333333333334 · dims: `{'elimination': True, 'pathways': True, 'enzymes': True, 'transporters': False, 'active_metabolites': True, 'protein_binding': True}`
+- **Citations:** 5 · rationale: True
+- **Tokens:** orch in=8 out=4198 cache_read=20337 | retr in=4 out=3678
+- **Flags:**
+  - fT>MIC β-lactam: efficacy depends on fraction of interval above MIC — dose frequently (q8h at this PMA/PNA), NOT total-exposure matched; engine value is directional only
+  - Engine exposure-matched dose (119.6 mg/kg/day) is SUB-THERAPEUTIC vs effective/guideline 200 mg/kg/day — overridden to guideline
+  - Critical illness / sepsis indication: neonatal Vd is expanded and CL immature — PK may diverge from healthy-adult exposure matching; treat as starting point
+  - Assumed term (GA 40w provided, consistent with case); interval is PMA/PNA-dependent — escalate frequency (q6h) after PNA 7 days
+  - Neurotoxicity/seizure risk at very high CNS exposures, chiefly with renal impairment — none here, but monitor
+  - Combine with aminoglycoside per standard empiric neonatal sepsis regimens (clinician decision); flush line — ampicillin inactivates aminoglycosides in-line
+- **Grade rationale:** Live PK retrieved, but ampicillin is a time>MIC β-lactam: the allometry×maturation engine matches total daily exposure only, which is a directional proxy (grade ceiling B) that here underdoses vs guideline (0.60× band). Final dose adopts well-established neonatal guideline concordance rather than the engine number.
+
+## ampicillin · `child_2y_egfr85`
+- **Grade:** B · **Dose:** 200 mg/kg/day · **54.9s**
+- **Concordance:** guideline 120 · ratio 1.667 · 0.67–1.5×: FAIL · 0.5–2×: PASS
+- **Mechanism score:** 0.8333333333333334 · dims: `{'elimination': True, 'pathways': True, 'enzymes': True, 'transporters': False, 'active_metabolites': True, 'protein_binding': True}`
+- **Citations:** 4 · rationale: True
+- **Tokens:** orch in=10 out=4068 cache_read=35557 | retr in=0 out=0
+- **Flags:**
+  - OVERRIDE: engine TIME>MIC proxy (~154 mg/kg/day) was sub-therapeutic (<200 mg/kg/day floor); final dose anchored to guideline 200 mg/kg/day.
+  - TIME>MIC (fT>MIC) beta-lactam: efficacy driven by fraction of interval above MIC, not total exposure — give frequently (q4-6h) or extended infusion; total-daily-dose match is DIRECTIONAL only.
+  - RENAL impairment (eGFR 85, fraction 0.85) — mild; no dose reduction from floor, but reassess interval and monitor renal trend (CNS penetration/seizure risk with accumulation in renal impairment).
+  - Indication label says 'neonatal' but covariates are a 2-year-old (12 kg) — dosed as toddler, not neonate. Confirm patient identity/indication.
+  - 20% of adult clearance unattributed to a maturing pathway (scaled by size only) — minor error source, low impact at age 2.
+  - Exposure/PD matching assumption: adult effective target assumed applicable to child.
+  - Wide guideline range (50-400 mg/kg/day); 200 chosen for Listeria/enterococcal coverage. Max 12 g/day.
+- **Grade rationale:** PK from cache (moderate confidence; adult CL/Vd derived, not directly measured). Ampicillin is a TIME>MIC beta-lactam, so the allometry total-daily-dose match is a directional PROXY only (grade ceiling B). Guideline concordance is strong and used as the primary anchor. No live source and PD exposure-matching assumption prevent grade A.
+
+## ampicillin · `obese_1y_14kg`
+- **Grade:** B · **Dose:** 200 mg/kg/day · **56.1s**
+- **Concordance:** guideline 150 · ratio 1.333 · 0.67–1.5×: PASS · 0.5–2×: PASS
+- **Mechanism score:** 0.6666666666666666 · dims: `{'elimination': True, 'pathways': False, 'enzymes': True, 'transporters': False, 'active_metabolites': True, 'protein_binding': True}`
+- **Citations:** 5 · rationale: True
+- **Tokens:** orch in=10 out=4166 cache_read=35643 | retr in=0 out=0
+- **Flags:**
+  - INDICATION/AGE MISMATCH: labeled 'neonatal' but patient is 1 y / 14 kg — dosed as a 1-year-old child, NOT a neonate. Verify intended patient.
+  - SUB-THERAPEUTIC ENGINE ESTIMATE: allometric exposure-match (158 mg/kg/day) fell below the 200 mg/kg/day effective threshold; guideline dose adopted instead.
+  - TIME>MIC β-LACTAM: total-daily-dose match is a PROXY only — dose frequently (q4-6h) or by extended/continuous infusion; efficacy = fT>MIC.
+  - ASSUMED-TERM: PMA not supplied for child <2 y — assumed 40 wk gestation. (Low impact at age 1 y.)
+  - EXPOSURE-MATCHING PD ASSUMPTION: healthy-adult exposure equivalence assumed.
+  - PK source = shared cache, not live retrieval.
+  - OBESITY / high weight-for-age (14 kg vs ~10 kg ideal at 1 y): weight-linear dosing may overestimate exposure; consider adjusted body weight.
+  - CRITICAL ILLNESS/sepsis: Vd and CL may diverge from healthy-adult PK — starting point only.
+  - LISTERIA/CNS: consider aminoglycoside combination and possibly higher dose per local guideline; separate ampicillin from aminoglycoside in the line (inactivation).
+- **Grade rationale:** PK from shared cache (not live), moderate confidence with derived adult CL/Vd. Guideline-concordant for the indication. Ceiling of B because ampicillin is a time>MIC β-lactam: total-daily-dose exposure matching is a proxy only, so the allometric estimate is directional. Grade not lowered to C/D because robust pediatric guideline dosing (200 mg/kg/day for Listeria) anchors the recommendation.
+
+## caffeine · `neonate_5d`
+- **Grade:** A · **Dose:** 5 mg/kg/day · **118.2s**
+- **Concordance:** guideline 5 · ratio 1.0 · 0.67–1.5×: PASS · 0.5–2×: PASS
+- **Mechanism score:** 0.5 · dims: `{'elimination': True, 'pathways': False, 'enzymes': False, 'transporters': True, 'active_metabolites': False, 'protein_binding': True}`
+- **Citations:** 5 · rationale: True
+- **Tokens:** orch in=10 out=4503 cache_read=36829 | retr in=8 out=4235
+- **Flags:**
+  - EXPOSURE-MATCHING ASSUMPTION FAILED: engine scaled to adult steady-state Css, but the neonatal AOP therapeutic target (~5-25 mg/L caffeine) is higher and better tolerated than adult exposure; allometric dose (~1.5 mg/kg/day) is markedly SUB-THERAPEUTIC and must NOT be used.
+  - SALT FORM: doses are caffeine CITRATE; caffeine base is ~50% of these values — verify product labeling to avoid 2x dosing error.
+  - IMMATURE CLEARANCE / LONG HALF-LIFE: CYP1A2 markedly immature in neonates; real neonatal caffeine t1/2 ~50-100 h (engine estimated ~7.7 h, likely underestimate). Justifies once-daily maintenance and the large loading dose; accumulation risk if renal/hepatic maturation is delayed.
+  - ACTIVE METABOLITES: paraxanthine/theobromine/theophylline; in neonates interconversion of caffeine<->theophylline occurs and metabolite maturation differs from parent.
+  - TDM: routine serum caffeine monitoring generally not required per AAP, but consider levels for persistent apnea, tachycardia, or signs of toxicity.
+  - COVARIATE NOTE: GA 40 wk + PNA 5 d = TERM infant (3.5 kg); AOP and this regimen are validated in PRETERM neonates. Confirm indication is genuine apnea of prematurity vs. apnea from another cause before treating.
+  - PRESCRIBER VERIFICATION REQUIRED: decision support only.
+- **Grade rationale:** Live PK retrieved; a robust, FDA-labeled and CAP-trial-validated neonatal weight-based regimen exists with strong guideline concordance. Grade A reflects the guideline dose (which I adopt), NOT the allometric engine output — the latter is invalid here because adult-CSS exposure-matching does not represent the neonatal PD target.
+
+## caffeine · `child_2y_egfr85`
+- **Grade:** D · **Dose:** None mg/kg/day · **112.0s**
+- **Concordance:** guideline 5 · ratio None · 0.67–1.5×: FAIL · 0.5–2×: FAIL
+- **Mechanism score:** 0.5 · dims: `{'elimination': True, 'pathways': False, 'enzymes': False, 'transporters': True, 'active_metabolites': False, 'protein_binding': True}`
+- **Citations:** 3 · rationale: True
+- **Tokens:** orch in=8 out=3954 cache_read=19586 | retr in=6 out=4573
+- **Flags:**
+  - INDICATION–AGE MISMATCH: 'apnea of prematurity' entered for a 2-year-old — AOP is a preterm-neonatal diagnosis only. Verify true age/indication before dosing.
+  - ABSTAIN: no numeric starting dose issued (grade D).
+  - ACTIVE METABOLITES: theophylline (itself pharmacologically active) plus paraxanthine/theobromine — parent CL underestimates total methylxanthine effect; consider metabolite contribution.
+  - MATURATION MISMATCH: neonatal 5 mg/kg/day regimen relies on immature CYP1A2/long t1/2; at 2 yr CYP1A2 is ~66% mature and t1/2 ~4.3 h — once-daily dosing assumptions do not transfer.
+  - NARROW-THERAPEUTIC-INDEX methylxanthine (toxic ~20 mg/kg/day vs effective ~5): if any caffeine use is truly intended, obtain serum caffeine TDM.
+  - RENAL impairment flagged, but caffeine is <5% renally cleared — organ modifier has negligible effect; not dose-limiting.
+  - CSS drug with no adult daily dose supplied — engine cannot solve an absolute dose regardless of age.
+- **Grade rationale:** Indication–patient mismatch invalidates the dosing request: 'apnea of prematurity' is definitionally a preterm-neonatal disorder, but this patient is a 2-year-old (12 kg, PMA 144 wk). No guideline maintenance dose exists for AOP at this age, and the neonatal 5 mg/kg/day regimen depends on immature CYP1A2 ontogeny that no longer applies (engine CYP1A2 maturation factor 0.66 at 2 yr vs near-zero in 
+
+## caffeine · `obese_1y_14kg`
+- **Grade:** D · **Dose:** None mg/kg/day · **55.8s**
+- **Concordance:** guideline 5 · ratio None · 0.67–1.5×: FAIL · 0.5–2×: FAIL
+- **Mechanism score:** 0.5 · dims: `{'elimination': True, 'pathways': False, 'enzymes': False, 'transporters': True, 'active_metabolites': False, 'protein_binding': True}`
+- **Citations:** 3 · rationale: True
+- **Tokens:** orch in=12 out=3949 cache_read=35795 | retr in=0 out=0
+- **Flags:**
+  - INDICATION–POPULATION MISMATCH: apnea of prematurity is a neonatal diagnosis; patient covariates describe a 1-year-old 14 kg child — indication does not apply; NO DOSE ISSUED.
+  - NO ABSOLUTE DOSE FROM ENGINE: CSS drug with no adult daily-dose anchor; caffeine for AOP is dosed by fixed neonatal mg/kg, not adult-PK extrapolation.
+  - NARROW THERAPEUTIC INDEX → TDM: effective ~5 vs toxic ~20 mg/kg/day; monitor serum caffeine and for tachycardia if ever used.
+  - ACTIVE METABOLITES: paraxanthine, theobromine, theophylline — parent clearance ≠ full pharmacologic effect; metabolite maturation not separately modeled.
+  - ASSUMED-TERM GESTATION: no gestational age supplied; PMA assumed 40 wk — if truly preterm this understates immaturity and overestimates clearance.
+  - EXPOSURE-MATCHING PD ASSUMPTION: allometry×maturation matches drug exposure, not necessarily neonatal respiratory-stimulant effect.
+  - OBESITY / high weight-for-age (14.0 kg at 1.0 y; ideal ≈10 kg) — total-body-weight dosing may overestimate exposure; dosing-weight hint advisory only.
+- **Grade rationale:** Critical indication–population mismatch: apnea of prematurity is a neonatal condition, but the case describes a 1-year-old 14 kg term-equivalent child (PMA ~92 weeks). The allometry×maturation engine could not solve an absolute dose (caffeine for AOP is a CSS drug dosed by fixed mg/kg, with no adult daily-dose anchor). A weight-based extrapolation of the neonatal regimen to a 1-year-old is not cli
+
+### Batch summary (gentamicin, ampicillin, caffeine)
+- n=9 · within 0.67–1.5×: 4/9 · within 0.5–2×: 7/9
+- **Tokens this batch:** orch in/out 84/37493 (cache_read 257469) · retrieval in/out 26/15187 · **total 52,790**
+- finished 2026-07-11T16:40:46.888664+00:00
+
+---
+
+## Token usage ledger
+
+### Batch 1 (vancomycin, midazolam, morphine × 3)
+- **Not instrumented** — usage fields were returned by the API but not written to `usage_log.jsonl`.
+- Rough scale: ~9 cases × ~50–110 s; similar order of magnitude to batch 2 if re-run.
+
+### Batch 2 (gentamicin, ampicillin, caffeine × 3) — measured
+| Component | Tokens |
+|-----------|--------|
+| Orchestrator uncached input | 84 |
+| Orchestrator output | 37,493 |
+| Orchestrator cache **read** | 257,469 |
+| Orchestrator cache **write** | 156,860 |
+| Retrieval uncached input | 26 |
+| Retrieval output | 15,187 |
+| **Generation total** (uncached in + all out) | **52,790** |
+| **All reported fields sum** (incl. cache r/w) | **467,119** |
+
+Notes:
+- Prompt caching makes uncached `input_tokens` tiny; most prompt mass is cache_read/cache_write.
+- Generation total = tokens the models *produced* + uncached input (matches per-case `tok=` lines).
+- Cache fields dominate “throughput” but are billed at cache rates, not full input rates.
+
+### Cumulative (logged only = batch 2)
+- Cases logged: **9**
+- Generation total: **52,790**
+- With cache r/w: **467,119**

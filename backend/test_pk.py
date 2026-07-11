@@ -88,6 +88,20 @@ def test_new_pathways_accepted():
     print(f"  new pathways accepted: cyp1a2/2d6/2c9/2c19, ugt1a1  OK")
 
 
+def test_pk_cache():
+    from pk_cache import PkCache
+    c = PkCache(max_entries=2, max_bytes=50_000, ttl_seconds=3600)
+    d = {"cl_adult_l_h": 5.0, "vd_adult_l": 20.0, "fm": {"renal_gfr": 1.0}}
+    assert c.set("gentamicin", "sepsis", d, "live")
+    hit = c.get("gentamicin", "sepsis")
+    assert hit and hit["dossier"]["cl_adult_l_h"] == 5.0
+    assert c.set("vanco", None, d, "live")
+    assert c.set("amikacin", None, d, "live")  # evicts oldest
+    assert c.get("gentamicin", "sepsis") is None  # LRU evicted
+    assert not c.set("x", None, d, "unavailable")
+    print("  pk_cache: LRU + reject unavailable  OK")
+
+
 def test_edge_cases():
     from edge_cases import assess_edge_cases
     # prodrug
@@ -224,6 +238,7 @@ if __name__ == "__main__":
     test_refuses_unknown_pathway()
     test_new_pathways_accepted()
     test_edge_cases()
+    test_pk_cache()
     test_oral_bioavailability()
     test_time_mic_flag()
     test_safety_bounds_fire()

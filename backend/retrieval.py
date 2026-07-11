@@ -15,6 +15,7 @@ import os
 
 from anthropic import Anthropic
 
+from pk_cache import CACHE as PK_CACHE
 from retrieval_tools import TOOL_FUNCS, TOOL_SCHEMAS, openfda_label
 from skills import load_skill, list_skills
 
@@ -92,10 +93,21 @@ def _abstention(reason: str) -> dict:
     }
 
 
-def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5) -> dict:
-    """Retrieve a cited PK+mechanism dossier. Returns live or unavailable; never raises."""
+def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5,
+          use_cache: bool = True) -> dict:
+    """Retrieve a cited PK+mechanism dossier. Returns live, cache, or unavailable; never raises."""
     trace: list[str] = []
-    usage = {"input_tokens": 0, "output_tokens": 0, "model": RETRIEVAL_MODEL}
+    usage = {"input_tokens": 0, "output_tokens": 0, "model": RETRIEVAL_MODEL, "cache_hit": False}
+    if use_cache:
+        hit = PK_CACHE.get(drug, indication)
+        if hit:
+            usage["cache_hit"] = True
+            return {
+                "dossier": hit["dossier"],
+                "source_mode": "cache",
+                "trace": ["pk_cache hit — skipped live retrieval"],
+                "usage": usage,
+            }
     try:
         client = Anthropic()
         label = openfda_label(drug)
@@ -130,6 +142,8 @@ def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5) -> di
 
             for tu in tool_uses:
                 if tu.name == "submit_dossier" and tu.input:
+                    if use_cache:
+                        PK_CACHE.set(drug, indication, tu.input, source_mode="live")
                     return {"dossier": tu.input, "source_mode": "live",
                             "trace": trace, "usage": usage}
 

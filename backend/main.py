@@ -67,9 +67,11 @@ def index():
 
 @app.get("/health")
 def health():
+    from pk_cache import CACHE as PK_CACHE
     return {"ok": True, "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "model": os.environ.get("ORCHESTRATOR_MODEL", "claude-opus-4-8"),
-            "eval_drugs": sorted(_oracle_pk())}  # scored drug set (oracle), not a runtime source
+            "eval_drugs": sorted(_oracle_pk()),  # scored drug set (oracle), not a runtime source
+            "pk_cache": PK_CACHE.stats()}
 
 
 @app.post("/calculate")

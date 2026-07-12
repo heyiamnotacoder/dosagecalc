@@ -471,6 +471,35 @@
         </div>
       </div>
 
+      <div class="neo" id="renal-detail">
+        <strong>Renal function — estimate GFR to scale renal clearance.</strong>
+        <div class="grid2" style="margin-top:8px">
+          <div>
+            <label for="scr">Serum creatinine (mg/dL)</label>
+            <input id="scr" type="number" step="0.01" min="0" placeholder="e.g. 0.5">
+          </div>
+          <div>
+            <label for="height">Height (cm)</label>
+            <input id="height" type="number" step="0.5" min="0" placeholder="e.g. 110">
+          </div>
+        </div>
+        <div class="hint">Bedside Schwartz eGFR = 0.413 × height ÷ creatinine (pediatric standard; Cockcroft-Gault is adult-derived). Blank = no reduction applied, only a data-gap flag.</div>
+      </div>
+
+      <div class="neo" id="hepatic-detail">
+        <strong>Hepatic function — noted, not auto-adjusted.</strong>
+        <div class="field" style="margin-top:8px">
+          <label for="child-pugh">Child-Pugh class</label>
+          <select id="child-pugh">
+            <option value="">— not specified —</option>
+            <option value="A">A (mild)</option>
+            <option value="B">B (moderate)</option>
+            <option value="C">C (severe)</option>
+          </select>
+        </div>
+        <div class="hint">Hepatic dose adjustment is drug-specific — no automatic clearance reduction is applied; the class is surfaced as a note for drug-specific review.</div>
+      </div>
+
       <button class="btn go" id="go" type="submit">Reason to a dose →</button>
       <div class="keyhint" id="keyhint"></div>
     </form>
@@ -592,6 +621,15 @@ function go(view){
 const age = $("age");
 function checkNeo(){ $("neo").classList.toggle("show", parseFloat(age.value) < 2); }
 age.addEventListener("input", checkNeo); checkNeo();
+
+/* ---------------- organ-function detail reveal ---------------- */
+function checkOrgan(){
+  $("renal-detail").classList.toggle("show", $("renal").checked);
+  $("hepatic-detail").classList.toggle("show", $("hepatic").checked);
+}
+$("renal").addEventListener("change", checkOrgan);
+$("hepatic").addEventListener("change", checkOrgan);
+checkOrgan();
 
 /* ---------------- health / key hint ---------------- */
 fetch("/health").then(r=>r.json()).then(h=>{
@@ -718,6 +756,12 @@ $("form").addEventListener("submit", async (e)=>{
     payload.postnatal_age_days = pnaDays;
     payload.postnatal_age_weeks = pnaDays / 7.0;
   }
+  if($("renal").checked){
+    const scr = parseFloat($("scr").value), ht = parseFloat($("height").value);
+    if(Number.isFinite(scr) && scr > 0) payload.serum_creatinine_mg_dl = scr;
+    if(Number.isFinite(ht) && ht > 0) payload.height_cm = ht;
+  }
+  if($("hepatic").checked && $("child-pugh").value) payload.child_pugh = $("child-pugh").value;
   currentCase = payload;
 
   // prep loading screen

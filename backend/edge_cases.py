@@ -144,8 +144,9 @@ def assess_edge_cases(
         )
     if hepatic:
         flags.append(
-            "HEPATIC impairment flagged — organ-function modifier applied to hepatic pathways; "
-            "first-pass and high-extraction drugs especially uncertain."
+            "HEPATIC impairment flagged — adjustment is drug-specific (hepatic extraction ratio / "
+            "metabolic pathway); NO automatic clearance reduction is applied. First-pass and "
+            "high-extraction drugs especially uncertain — consult a drug-specific reference."
         )
     if illness and not (renal or hepatic):
         flags.append(

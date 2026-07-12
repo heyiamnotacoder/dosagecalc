@@ -26,6 +26,53 @@ from constants import (
 
 
 # ---------------------------------------------------------------------------
+# Renal function estimation (labs -> organ-function modifier)
+# ---------------------------------------------------------------------------
+# Bedside Schwartz constant (Schwartz GJ et al., J Am Soc Nephrol 2009): a
+# height/creatinine estimate validated in CHILDREN. Cockcroft-Gault is adult-
+# derived (uses 140 - age) and materially overestimates GFR in the young, so it
+# is deliberately NOT used here.
+SCHWARTZ_K_BEDSIDE = 0.413
+NORMAL_GFR_ML_MIN_1_73M2 = 100.0  # approx normal pediatric / young-adult GFR reference
+
+
+def estimate_gfr_bedside_schwartz(
+    height_cm: Optional[float],
+    serum_creatinine_mg_dl: Optional[float],
+) -> Optional[float]:
+    """Bedside Schwartz eGFR (mL/min/1.73 m^2) = 0.413 * height_cm / SCr(mg/dL).
+
+    Returns None when inputs are missing or non-physiological, so callers fall
+    back to a data-gap flag rather than a fabricated number.
+    """
+    try:
+        h = float(height_cm)
+        scr = float(serum_creatinine_mg_dl)
+    except (TypeError, ValueError):
+        return None
+    if h <= 0 or scr <= 0:
+        return None
+    return SCHWARTZ_K_BEDSIDE * h / scr
+
+
+def renal_function_fraction_from_labs(
+    height_cm: Optional[float],
+    serum_creatinine_mg_dl: Optional[float],
+    normal_gfr: float = NORMAL_GFR_ML_MIN_1_73M2,
+) -> Optional[float]:
+    """Renal organ-function modifier (OF) in (0, 1] from labs, relative to normal GFR.
+
+    OF multiplies the maturation-adjusted renal clearance in compute_pediatric_dose;
+    it represents impairment on top of age maturation. Clamped to [0.1, 1.0] (never
+    amplifies above normal). Returns None when GFR cannot be estimated.
+    """
+    egfr = estimate_gfr_bedside_schwartz(height_cm, serum_creatinine_mg_dl)
+    if egfr is None:
+        return None
+    return max(0.1, min(1.0, egfr / normal_gfr))
+
+
+# ---------------------------------------------------------------------------
 # Core maturation math
 # ---------------------------------------------------------------------------
 def maturation_factor(pma_weeks: float, tm50_weeks: float, hill: float) -> float:

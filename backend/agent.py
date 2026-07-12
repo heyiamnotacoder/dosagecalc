@@ -16,7 +16,12 @@ import os
 from anthropic import Anthropic
 
 import retrieval
-from pk_engine import compute_pediatric_dose, result_to_dict
+from pk_engine import (
+    compute_pediatric_dose,
+    estimate_gfr_bedside_schwartz,
+    renal_function_fraction_from_labs,
+    result_to_dict,
+)
 from skills import load_skill, list_skills
 
 ORCHESTRATOR_MODEL = os.environ.get("ORCHESTRATOR_MODEL", "claude-opus-4-8")
@@ -196,12 +201,27 @@ LOCAL_TOOLS = {
 
 
 def _normalize_case(case: dict) -> dict:
-    """Map UI bools to engine organ fractions; copy so we do not mutate caller."""
+    """Map UI inputs to engine organ fractions; copy so we do not mutate caller.
+
+    Renal: derive the organ-function modifier from labs (bedside Schwartz eGFR from
+    serum creatinine + height). If labs are absent we apply NO reduction (fraction
+    1.0) and rely on a data-gap flag — never a silent flat 0.5.
+    Hepatic: no automatic clearance reduction; adjustment is drug-specific and is
+    surfaced as a note (see _organ_function_flags).
+    """
     c = dict(case)
     if "renal_function_fraction" not in c:
-        c["renal_function_fraction"] = 0.5 if c.get("renal_impairment") else 1.0
+        frac = None
+        if c.get("renal_impairment"):
+            frac = renal_function_fraction_from_labs(
+                c.get("height_cm"), c.get("serum_creatinine_mg_dl")
+            )
+            c["estimated_gfr_ml_min_1_73m2"] = estimate_gfr_bedside_schwartz(
+                c.get("height_cm"), c.get("serum_creatinine_mg_dl")
+            )
+        c["renal_function_fraction"] = frac if frac is not None else 1.0
     if "hepatic_function_fraction" not in c:
-        c["hepatic_function_fraction"] = 0.5 if c.get("hepatic_impairment") else 1.0
+        c["hepatic_function_fraction"] = 1.0  # drug-specific; note instead of flat modifier
     # postnatal days → weeks for engine if provided
     if c.get("postnatal_age_days") is not None and c.get("postnatal_age_weeks") is None:
         try:
@@ -209,6 +229,50 @@ def _normalize_case(case: dict) -> dict:
         except (TypeError, ValueError):
             pass
     return c
+
+
+def _organ_function_flags(case: dict) -> list[str]:
+    """Deterministic renal/hepatic-impairment flags built from the normalized case.
+
+    Authoritative and model-independent: run_case injects these at submit time so the
+    graded output always reflects what the engine actually did with organ function.
+    """
+    flags: list[str] = []
+    if case.get("renal_impairment"):
+        egfr = case.get("estimated_gfr_ml_min_1_73m2")
+        frac = case.get("renal_function_fraction")
+        if egfr is not None:
+            flags.append(
+                f"RENAL impairment: estimated GFR ~{egfr:.0f} mL/min/1.73m^2 (bedside Schwartz "
+                f"from serum creatinine + height) → renal clearance scaled to ~{frac:.2f}x normal. "
+                "NOTE: Schwartz is the pediatric standard; Cockcroft-Gault (adult) is not used. "
+                "Reassess interval and TDM for renally-cleared / narrow-TI drugs."
+            )
+        else:
+            flags.append(
+                "RENAL impairment flagged but serum creatinine and/or height were not provided — "
+                "GFR was NOT estimated and NO clearance reduction was applied. Provide height + "
+                "serum creatinine for a Schwartz-based estimate; reassess interval and TDM."
+            )
+    if case.get("hepatic_impairment"):
+        cp = case.get("child_pugh")
+        cp_txt = f"Child-Pugh {str(cp).upper()} noted; " if cp else ""
+        flags.append(
+            f"HEPATIC impairment: {cp_txt}dose adjustment is DRUG-SPECIFIC (depends on the drug's "
+            "hepatic extraction ratio and metabolic pathway). No automatic clearance reduction was "
+            "applied — consult a drug-specific hepatic-impairment reference; further research required."
+        )
+    return flags
+
+
+def _apply_organ_function_flags(rec: dict, case: dict) -> None:
+    """Replace any renal/hepatic-impairment flags with the authoritative deterministic ones."""
+    kept = [
+        f for f in (rec.get("flags") or [])
+        if not str(f).startswith(("RENAL impairment", "HEPATIC impairment"))
+    ]
+    kept.extend(_organ_function_flags(case))
+    rec["flags"] = kept
 
 
 def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
@@ -275,6 +339,8 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                     if not any("SAFETY STOP" in str(f) for f in flags):
                         flags.insert(0, f"SAFETY STOP: {blocked_reason}")
                     rec["flags"] = flags
+                # Authoritative renal/hepatic-impairment flags (model-independent).
+                _apply_organ_function_flags(rec, case)
                 return {
                     "recommendation": rec,
                     "trace": trace,

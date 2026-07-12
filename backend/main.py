@@ -24,7 +24,11 @@ from pydantic import BaseModel
 load_dotenv()  # pulls ANTHROPIC_API_KEY from backend/.env
 
 from agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402  (after load_dotenv)
-from pk_engine import compute_pediatric_dose, result_to_dict  # noqa: E402
+from pk_engine import (  # noqa: E402
+    compute_pediatric_dose,
+    renal_function_fraction_from_labs,
+    result_to_dict,
+)
 
 # Chat follow-ups are a single cheap call; default to the orchestrator model so it always works,
 # override with CHAT_MODEL (e.g. claude-sonnet-5) to make them cheaper/faster.
@@ -47,6 +51,15 @@ def _oracle_pk() -> dict:
         return json.load(f)["drugs"]
 
 
+def _renal_fraction(case: "Case") -> float:
+    """Renal organ-function modifier from labs (bedside Schwartz). No labs / no impairment
+    → 1.0 (no silent reduction). Mirrors agent._normalize_case for the /calculate path."""
+    if not case.renal_impairment:
+        return 1.0
+    frac = renal_function_fraction_from_labs(case.height_cm, case.serum_creatinine_mg_dl)
+    return frac if frac is not None else 1.0
+
+
 class Case(BaseModel):
     drug: str
     indication: str | None = None
@@ -57,6 +70,9 @@ class Case(BaseModel):
     postnatal_age_weeks: float | None = None
     renal_impairment: bool = False
     hepatic_impairment: bool = False
+    serum_creatinine_mg_dl: float | None = None  # for bedside-Schwartz eGFR when renal-impaired
+    height_cm: float | None = None               # required alongside creatinine for Schwartz
+    child_pugh: str | None = None                # "A" | "B" | "C" — noted only (drug-specific)
     route: str = "iv"  # "iv" | "oral" — governs the oral-bioavailability correction
 
 
@@ -207,8 +223,8 @@ def pk(case: Case):
         gestational_age_weeks=case.gestational_age_weeks,
         postnatal_age_weeks=case.postnatal_age_weeks,
         adult_dose_mg_per_day=seed.get("typical_adult_dose_mg_per_day"),
-        renal_function_fraction=0.5 if case.renal_impairment else 1.0,
-        hepatic_function_fraction=0.5 if case.hepatic_impairment else 1.0,
+        renal_function_fraction=_renal_fraction(case),
+        hepatic_function_fraction=1.0,  # drug-specific; no automatic hepatic reduction
         route=case.route,
         oral_bioavailability=seed.get("oral_bioavailability", 1.0),
         toxic_dose_mg_per_kg_per_day=seed.get("toxic_dose_mg_per_kg_per_day"),

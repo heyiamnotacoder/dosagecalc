@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .DS_Store
 checklist.md
+
+# Local-only working files (not part of the open-source deliverable)
+IMG_3363.jpeg
+judge_feedback.md

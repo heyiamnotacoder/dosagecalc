@@ -1,5 +1,5 @@
 {
-  "_comment": "DEMO BRANCH ONLY. Pediatric guideline midpoints (mg/kg/day) for all 20 demo drugs. Returned alongside the demo PK dossier so the agent can concordance-check without web_search. Never merge demo \u2192 master.",
+  "_comment": "DEMO BRANCH ONLY. One pediatric guideline midpoint (mg/kg/day) per demo drug/indication, returned alongside the demo PK dossier so the agent can concordance-check without web_search. Never merge demo \u2192 master.",
   "_drugs": [
     "vancomycin",
     "gentamicin",
@@ -26,55 +26,39 @@
     "vancomycin": {
       "route": "iv",
       "indication": "serious gram-positive infection",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 30,
-        "child_2y_egfr85": 45,
-        "obese_1y_14kg": 60
-      },
-      "source": "IDSA/ASHP / NNF; eGFR85 \u2192 reduce ~25%",
+      "pediatric_mg_per_kg_per_day": 45,
+      "source": "IDSA/ASHP / NNF",
       "tdm_required": true
     },
     "gentamicin": {
       "route": "iv",
       "indication": "gram-negative infection",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 4,
-        "child_2y_egfr85": 5.5,
-        "obese_1y_14kg": 7
-      },
+      "pediatric_mg_per_kg_per_day": 5.5,
       "source": "BNFc aminoglycoside; extend interval neonate",
       "tdm_required": true
     },
     "amikacin": {
       "route": "iv",
       "indication": "resistant gram-negative infection",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 15,
-        "child_2y_egfr85": 15,
-        "obese_1y_14kg": 19
-      },
+      "pediatric_mg_per_kg_per_day": 15,
       "source": "BNFc / NNF",
       "tdm_required": true
     },
     "ampicillin": {
       "route": "iv",
       "indication": "neonatal sepsis / listeria",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 100,
-        "child_2y_egfr85": 120,
-        "obese_1y_14kg": 150
-      },
+      "pediatric_mg_per_kg_per_day": 120,
       "source": "BNFc \u03b2-lactam / NNF",
       "tdm_required": false,
       "indications": {
         "meningitis": {
-          "match": ["meningitis", "gbs meningitis", "cns"],
+          "match": [
+            "meningitis",
+            "gbs meningitis",
+            "cns"
+          ],
           "indication": "GBS / listeria meningitis (high-dose)",
-          "scenario_doses_mg_per_kg_per_day": {
-            "neonate_5d": 300,
-            "child_2y_egfr85": 300,
-            "obese_1y_14kg": 300
-          },
+          "pediatric_mg_per_kg_per_day": 300,
           "source": "BNFc / NNF meningitis high-dose"
         }
       }
@@ -82,22 +66,18 @@
     "meropenem": {
       "route": "iv",
       "indication": "serious gram-negative infection",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 60,
-        "child_2y_egfr85": 60,
-        "obese_1y_14kg": 60
-      },
+      "pediatric_mg_per_kg_per_day": 60,
       "source": "BNFc / NeoFax-style (standard indication)",
       "tdm_required": false,
       "indications": {
         "meningitis": {
-          "match": ["meningitis", "cns", "ventriculitis"],
+          "match": [
+            "meningitis",
+            "cns",
+            "ventriculitis"
+          ],
           "indication": "meningitis / CNS (high-dose)",
-          "scenario_doses_mg_per_kg_per_day": {
-            "neonate_5d": 120,
-            "child_2y_egfr85": 120,
-            "obese_1y_14kg": 120
-          },
+          "pediatric_mg_per_kg_per_day": 120,
           "source": "BNFc / NeoFax-style; meningitis doubles the dose"
         }
       }
@@ -105,22 +85,17 @@
     "cefotaxime": {
       "route": "iv",
       "indication": "neonatal sepsis",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 100,
-        "child_2y_egfr85": 150,
-        "obese_1y_14kg": 150
-      },
+      "pediatric_mg_per_kg_per_day": 150,
       "source": "BNFc / NNF sepsis",
       "tdm_required": false,
       "indications": {
         "meningitis": {
-          "match": ["meningitis", "cns"],
+          "match": [
+            "meningitis",
+            "cns"
+          ],
           "indication": "meningitis (high-dose)",
-          "scenario_doses_mg_per_kg_per_day": {
-            "neonate_5d": 200,
-            "child_2y_egfr85": 200,
-            "obese_1y_14kg": 200
-          },
+          "pediatric_mg_per_kg_per_day": 200,
           "source": "BNFc / NNF meningitis high-dose"
         }
       }
@@ -128,32 +103,30 @@
     "acyclovir": {
       "route": "iv",
       "indication": "HSV / VZV (neonatal HSV)",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 60,
-        "child_2y_egfr85": 30,
-        "obese_1y_14kg": 30
-      },
+      "pediatric_mg_per_kg_per_day": 30,
       "source": "neonatal HSV high-dose; child HSV lower",
       "tdm_required": false,
       "indications": {
         "encephalitis": {
-          "match": ["encephalitis", "hsv encephalitis", "hse", "cns"],
+          "match": [
+            "encephalitis",
+            "hsv encephalitis",
+            "hse",
+            "cns"
+          ],
           "indication": "HSV encephalitis (high-dose IV)",
-          "scenario_doses_mg_per_kg_per_day": {
-            "neonate_5d": 60,
-            "child_2y_egfr85": 45,
-            "obese_1y_14kg": 45
-          },
+          "pediatric_mg_per_kg_per_day": 45,
           "source": "HSV encephalitis 20 mg/kg q8h"
         },
         "varicella": {
-          "match": ["varicella", "vzv", "chickenpox", "zoster"],
+          "match": [
+            "varicella",
+            "vzv",
+            "chickenpox",
+            "zoster"
+          ],
           "indication": "VZV / varicella\u2013zoster",
-          "scenario_doses_mg_per_kg_per_day": {
-            "neonate_5d": 30,
-            "child_2y_egfr85": 30,
-            "obese_1y_14kg": 30
-          },
+          "pediatric_mg_per_kg_per_day": 30,
           "source": "VZV lower than HSV encephalitis"
         }
       }
@@ -161,143 +134,91 @@
     "levetiracetam": {
       "route": "iv",
       "indication": "seizures",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 40,
-        "child_2y_egfr85": 40,
-        "obese_1y_14kg": 40
-      },
+      "pediatric_mg_per_kg_per_day": 40,
       "source": "pediatric epilepsy guidance",
       "tdm_required": false
     },
     "fluconazole": {
       "route": "iv",
       "indication": "candida / prophylaxis",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 12,
-        "child_2y_egfr85": 6,
-        "obese_1y_14kg": 6
-      },
-      "source": "invasive candida neonate higher; eGFR reduce",
+      "pediatric_mg_per_kg_per_day": 6,
+      "source": "invasive candida neonate higher",
       "tdm_required": false
     },
     "midazolam": {
       "route": "iv",
       "indication": "sedation",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 0.72,
-        "child_2y_egfr85": 1.44,
-        "obese_1y_14kg": 1.44
-      },
+      "pediatric_mg_per_kg_per_day": 1.44,
       "source": "BNFc ICU sedation",
       "tdm_required": false
     },
     "fentanyl": {
       "route": "iv",
       "indication": "analgesia/sedation",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 0.024,
-        "child_2y_egfr85": 0.048,
-        "obese_1y_14kg": 0.048
-      },
+      "pediatric_mg_per_kg_per_day": 0.048,
       "source": "APA/BNFc analgesia",
       "tdm_required": false
     },
     "clindamycin": {
       "route": "iv",
       "indication": "anaerobic / gram-positive",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 15,
-        "child_2y_egfr85": 30,
-        "obese_1y_14kg": 30
-      },
+      "pediatric_mg_per_kg_per_day": 30,
       "source": "BNFc",
       "tdm_required": false
     },
     "morphine": {
       "route": "iv",
       "indication": "analgesia",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 0.12,
-        "child_2y_egfr85": 0.48,
-        "obese_1y_14kg": 0.48
-      },
+      "pediatric_mg_per_kg_per_day": 0.48,
       "source": "APA/BNFc; M6G caution",
       "tdm_required": false
     },
     "caffeine": {
       "route": "iv",
       "indication": "apnea of prematurity (caffeine citrate)",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 5,
-        "child_2y_egfr85": 5,
-        "obese_1y_14kg": 5
-      },
+      "pediatric_mg_per_kg_per_day": 5,
       "source": "AOP maintenance caffeine citrate ~5 mg/kg/day base",
       "tdm_required": false
     },
     "theophylline": {
       "route": "iv",
       "indication": "apnea / bronchospasm (historical)",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 4,
-        "child_2y_egfr85": 12,
-        "obese_1y_14kg": 12
-      },
+      "pediatric_mg_per_kg_per_day": 12,
       "source": "historical NTI; TDM",
       "tdm_required": true
     },
     "phenytoin": {
       "route": "iv",
       "indication": "seizures",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 5,
-        "child_2y_egfr85": 8,
-        "obese_1y_14kg": 8
-      },
+      "pediatric_mg_per_kg_per_day": 8,
       "source": "neonatal seizures load separate; maint approx",
       "tdm_required": true
     },
     "ibuprofen": {
       "route": "iv",
       "indication": "PDA closure / analgesia",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 10,
-        "child_2y_egfr85": 20,
-        "obese_1y_14kg": 20
-      },
+      "pediatric_mg_per_kg_per_day": 20,
       "source": "PDA course differs; analgesia mg/kg",
       "tdm_required": false
     },
     "phenobarbital": {
       "route": "iv",
       "indication": "neonatal seizures",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 5,
-        "child_2y_egfr85": 5,
-        "obese_1y_14kg": 5
-      },
+      "pediatric_mg_per_kg_per_day": 5,
       "source": "neonatal seizure maintenance ~3-5 mg/kg/day",
       "tdm_required": true
     },
     "metronidazole": {
       "route": "iv",
       "indication": "anaerobic / NEC-related",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 15,
-        "child_2y_egfr85": 30,
-        "obese_1y_14kg": 30
-      },
+      "pediatric_mg_per_kg_per_day": 30,
       "source": "BNFc / NNF",
       "tdm_required": false
     },
     "ondansetron": {
       "route": "iv",
       "indication": "nausea / vomiting",
-      "scenario_doses_mg_per_kg_per_day": {
-        "neonate_5d": 0.3,
-        "child_2y_egfr85": 0.3,
-        "obese_1y_14kg": 0.3
-      },
+      "pediatric_mg_per_kg_per_day": 0.3,
       "source": "pediatric antiemetic ~0.15 mg/kg/dose \u00d72",
       "tdm_required": false
     }

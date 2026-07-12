@@ -20,19 +20,24 @@ PaedScale encodes the gap between the naive linear line and the true maturation 
 ## Architecture
 ```
 frontend/index.html         self-contained UI (form → /calculate/stream → graded result + chat)
-backend/
-  constants.py              MATURATION params (TM50/Hill) ONLY — engine backbone. NO per-drug PK.
-  pk_engine.py              DETERMINISTIC math: allometry × maturation, dose solve, oral-F, safety
-  edge_cases.py             deterministic flags: prodrug / obesity / protein-binding / illness
-  pk_cache.py               bounded in-process LRU for live dossiers (Render single-dyno shared pool)
+backend/                    (run all commands from here; backend/ is the package root)
+  engine/                   deterministic backbone (no I/O, no LLM)
+    constants.py            MATURATION params (TM50/Hill) ONLY — engine backbone. NO per-drug PK.
+    pk_engine.py            DETERMINISTIC math: allometry × maturation, dose solve, oral-F, safety,
+                            renal eGFR (bedside Schwartz) → organ-function modifier
+    edge_cases.py           deterministic flags: prodrug / obesity / protein-binding / illness
+    pk_cache.py             bounded in-process LRU for live dossiers (Render single-dyno shared pool)
+    mechanism_score.py      mechanistic-reasoning scorer (6 PRD dimensions)
+  retrieval/                retrieval subagent + tools (package; `import retrieval` → __init__.py)
+    __init__.py             RETRIEVAL SUBAGENT → cited dossier (or cache hit), or abstains
+    retrieval_tools.py      httpx: PubMed E-utilities + openFDA + web_fetch
+  agents/
+    agent.py                Opus ORCHESTRATOR: load_skill → retrieve → compute → edge_cases → grade
+  api/
+    main.py                 FastAPI: /, /calculate, /calculate/stream, /chat, /pk, /health
+    mcp_server.py           MCP server for the same retrieval tools (FastMCP, stdio)
+  tests/                    test_pk.py / test_agent.py
   skills/                   lean markdown skills (mechanism, pubmed, openfda, webfetch, edge_cases)
-  retrieval_tools.py        httpx: PubMed E-utilities + openFDA + web_fetch
-  retrieval.py              RETRIEVAL SUBAGENT → cited dossier (or cache hit), or abstains
-  mcp_server.py             MCP server for the same retrieval tools (FastMCP, stdio)
-  agent.py                  Opus ORCHESTRATOR: load_skill → retrieve → compute → edge_cases → grade
-  mechanism_score.py        mechanistic-reasoning scorer (6 PRD dimensions)
-  main.py                   FastAPI: /, /calculate, /calculate/stream, /chat, /pk, /health
-  test_pk.py / test_agent.py
   eval_data/                ANSWER KEYS ONLY — harness never product path
 ```
 
@@ -123,15 +128,15 @@ Grades: **A** passes concordance vs a real guideline · **B** solid PK, no guide
 
 ## Run
 ```bash
-cd backend
+cd backend                         # backend/ is the package root — run everything from here
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python3 test_pk.py                 # deterministic core + scorers — NO key needed
+python3 -m tests.test_pk           # deterministic core + scorers — NO key needed
 cp .env.example .env               # ANTHROPIC_API_KEY (+ optional OPENFDA_API_KEY / NCBI_API_KEY)
-uvicorn main:app --reload --port 8000
+uvicorn api.main:app --reload --port 8000
 # open http://localhost:8000
-python3 test_agent.py              # end-to-end eval (needs key + network); --full for all drugs
-python3 mcp_server.py              # optional: run the retrieval MCP server (stdio)
+python3 -m tests.test_agent        # end-to-end eval (needs key + network); --full for all drugs
+python3 -m api.mcp_server          # optional: run the retrieval MCP server (stdio)
 ```
 `/pk` and `test_pk.py` run without a key (they read the `eval_data/` oracle). `/calculate`,
 `agent.py`, `retrieval.py` need the key **and network** (live PubMed/openFDA).

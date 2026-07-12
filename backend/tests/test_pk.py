@@ -11,10 +11,10 @@ Run:  python test_pk.py
 import json
 import os
 
-from pk_engine import compute_pediatric_dose, maturation_factor
+from engine.pk_engine import compute_pediatric_dose, maturation_factor
 
 HERE = os.path.dirname(__file__)
-EVAL = os.path.join(HERE, "eval_data")
+EVAL = os.path.join(HERE, "..", "eval_data")
 BAND_HI, BAND_LO = 1.5, 0.67  # concordance band
 
 # The reviewed adult-PK oracle (moved out of production code) — the harness reads it to feed
@@ -77,7 +77,7 @@ def test_refuses_unknown_pathway():
 
 def test_new_pathways_accepted():
     """Expanded MATURATION keys must be callable (cyp1a2, cyp2d6, …)."""
-    from constants import MATURATION
+    from engine.constants import MATURATION
     for key in ("cyp1a2", "cyp2d6", "cyp2c9", "cyp2c19", "ugt1a1"):
         assert key in MATURATION, key
         r = compute_pediatric_dose(
@@ -89,7 +89,7 @@ def test_new_pathways_accepted():
 
 
 def test_pk_cache():
-    from pk_cache import PkCache
+    from engine.pk_cache import PkCache
     c = PkCache(max_entries=2, max_bytes=50_000, ttl_seconds=3600)
     d = {"cl_adult_l_h": 5.0, "vd_adult_l": 20.0, "fm": {"renal_gfr": 1.0}}
     assert c.set("gentamicin", "sepsis", d, "live")
@@ -103,7 +103,7 @@ def test_pk_cache():
 
 
 def test_edge_cases():
-    from edge_cases import assess_edge_cases
+    from engine.edge_cases import assess_edge_cases
     # prodrug
     r = assess_edge_cases({"drug": "codeine", "age_years": 6, "weight_kg": 20}, {})
     assert any("PRODRUG" in f for f in r["flags"]), r
@@ -200,7 +200,7 @@ def test_route_not_viable_hard_stop():
 
 def test_mechanism_scorer():
     """The mechanism scorer must reward a perfect answer and catch a targeted miss (no key)."""
-    from mechanism_score import load_truth, score_mechanism
+    from engine.mechanism_score import load_truth, score_mechanism
     truth = load_truth()["drugs"]
     assert score_mechanism(truth["vancomycin"], truth["vancomycin"])["overall"] == 1.0
     miss = score_mechanism(

@@ -4,7 +4,7 @@ PaedScale — FastAPI backend.
 Serves the lightweight frontend and a /calculate endpoint that runs a case through the
 Claude orchestration layer. Also exposes /pk for the deterministic engine alone (no key).
 
-Run:  uvicorn main:app --reload --port 8000
+Run:  uvicorn api.main:app --reload --port 8000   (from the backend/ directory)
 Then open http://localhost:8000
 """
 
@@ -23,8 +23,8 @@ from pydantic import BaseModel
 
 load_dotenv()  # pulls ANTHROPIC_API_KEY from backend/.env
 
-from agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402  (after load_dotenv)
-from pk_engine import (  # noqa: E402
+from agents.agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402  (after load_dotenv)
+from engine.pk_engine import (  # noqa: E402
     compute_pediatric_dose,
     renal_function_fraction_from_labs,
     result_to_dict,
@@ -40,8 +40,8 @@ app.add_middleware(
 )
 
 HERE = os.path.dirname(__file__)
-FRONTEND = os.path.join(HERE, "..", "frontend", "index.html")
-EVAL_PK = os.path.join(HERE, "eval_data", "drug_pk.json")
+FRONTEND = os.path.join(HERE, "..", "..", "frontend", "index.html")
+EVAL_PK = os.path.join(HERE, "..", "eval_data", "drug_pk.json")
 
 
 def _oracle_pk() -> dict:
@@ -83,7 +83,7 @@ def index():
 
 @app.get("/health")
 def health():
-    from pk_cache import CACHE as PK_CACHE
+    from engine.pk_cache import CACHE as PK_CACHE
     return {"ok": True, "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "model": os.environ.get("ORCHESTRATOR_MODEL", "claude-opus-4-8"),
             "eval_drugs": sorted(_oracle_pk()),  # scored drug set (oracle), not a runtime source

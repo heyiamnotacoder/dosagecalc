@@ -20,10 +20,10 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from retrieval_tools import openfda_label as _openfda_label
-from retrieval_tools import pubmed_fetch as _pubmed_fetch
-from retrieval_tools import pubmed_search as _pubmed_search
-from retrieval_tools import web_fetch as _web_fetch
+from retrieval.retrieval_tools import openfda_label as _openfda_label
+from retrieval.retrieval_tools import pubmed_fetch as _pubmed_fetch
+from retrieval.retrieval_tools import pubmed_search as _pubmed_search
+from retrieval.retrieval_tools import web_fetch as _web_fetch
 
 mcp = FastMCP("paedscale-retrieval")
 

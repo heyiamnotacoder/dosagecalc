@@ -16,7 +16,7 @@ import os
 from anthropic import Anthropic
 
 import retrieval
-from pk_engine import (
+from engine.pk_engine import (
     compute_pediatric_dose,
     estimate_gfr_bedside_schwartz,
     renal_function_fraction_from_labs,
@@ -183,7 +183,7 @@ def _compute(args: dict) -> dict:
 
 def _assess_edge_cases(args: dict) -> dict:
     try:
-        from edge_cases import assess_edge_cases
+        from engine.edge_cases import assess_edge_cases
         return assess_edge_cases(
             args.get("case") or {},
             args.get("dossier"),

@@ -45,7 +45,7 @@ def _normset(xs) -> set[str]:
 
 
 def load_truth() -> dict:
-    with open(os.path.join(HERE, "eval_data", "mechanism_truth.json")) as f:
+    with open(os.path.join(HERE, "..", "eval_data", "mechanism_truth.json")) as f:
         return json.load(f)
 
 

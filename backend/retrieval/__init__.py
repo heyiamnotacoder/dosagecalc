@@ -15,8 +15,8 @@ import os
 
 from anthropic import Anthropic
 
-from pk_cache import CACHE as PK_CACHE
-from retrieval_tools import TOOL_FUNCS, TOOL_SCHEMAS, openfda_label
+from engine.pk_cache import CACHE as PK_CACHE
+from retrieval.retrieval_tools import TOOL_FUNCS, TOOL_SCHEMAS, openfda_label
 from skills import load_skill, list_skills
 
 RETRIEVAL_MODEL = os.environ.get("RETRIEVAL_MODEL", "claude-sonnet-5")

@@ -14,11 +14,11 @@ import time
 from dotenv import load_dotenv
 load_dotenv()
 
-from agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402
-from mechanism_score import DIMENSIONS, load_truth, score_mechanism  # noqa: E402
+from agents.agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402
+from engine.mechanism_score import DIMENSIONS, load_truth, score_mechanism  # noqa: E402
 
 BAND_HI, BAND_LO = 1.5, 0.67
-with open(os.path.join(os.path.dirname(__file__), "eval_data", "guidelines.json")) as _f:
+with open(os.path.join(os.path.dirname(__file__), "..", "eval_data", "guidelines.json")) as _f:
     GUIDELINES = json.load(_f)["drugs"]
 
 

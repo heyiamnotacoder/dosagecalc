@@ -90,29 +90,44 @@ def _match_indication(variants: dict, indication: str | None) -> str | None:
     return None
 
 
-def _resolve_indication(entry: dict, indication: str | None) -> tuple[dict, str | None]:
-    """Merge the matching indication override onto a fresh copy of the base entry.
+def _strip_indications(entry: dict) -> dict:
+    """Fresh copy of the entry without its `indications` override map."""
+    return {k: v for k, v in entry.items() if k != "indications"}
 
-    Returns (resolved_entry_without_the_`indications`_map, matched_variant_key_or_None).
-    Falling back to the base preserves today's behaviour when no indication is given
-    or nothing matches. Always returns a new dict so the lru_cached pack is never mutated.
+
+def _apply_variant(entry: dict, key: str | None) -> tuple[dict, bool]:
+    """Merge the named indication variant onto a fresh base copy of `entry`.
+
+    Returns (resolved_entry, applied). `applied` is True only when `key` is set AND
+    this entry actually carries that variant — so a caller never labels an entry with
+    a variant it does not have. Always a new dict, so the lru_cached pack is untouched.
     """
-    base = {k: v for k, v in entry.items() if k != "indications"}
-    variants = entry.get("indications") or {}
-    key = _match_indication(variants, indication)
-    if key is None:
-        return base, None
-    override = {k: v for k, v in variants[key].items() if k not in _CONTROL_KEYS}
-    base.update(override)
-    return base, key
+    base = _strip_indications(entry)
+    if not key:
+        return base, False
+    variant = (entry.get("indications") or {}).get(key)
+    if not variant:
+        return base, False
+    base.update({k: v for k, v in variant.items() if k not in _CONTROL_KEYS})
+    return base, True
+
+
+def _resolve_indication(entry: dict, indication: str | None) -> tuple[dict, str | None]:
+    """Resolve `indication` against the entry's own variants → (resolved_entry, matched_key)."""
+    key = _match_indication(entry.get("indications") or {}, indication)
+    resolved, _ = _apply_variant(entry, key)
+    return resolved, key
 
 
 def lookup(drug: str, indication: str | None = None) -> dict | None:
     """Return {dossier, guideline} for a demo drug, resolved for `indication`, or None.
 
-    Indication-sensitive drugs carry an `indications` override map; the caller's
-    indication selects the variant (falling back to the base entry). The returned
-    dossier/guideline are fresh dicts, so callers cannot mutate the cached pack.
+    The dossier is AUTHORITATIVE: the indication is matched once against the dossier's
+    variants, and that same key is applied to the guideline. This prevents a parser-
+    differential where the guideline resolves to a variant (e.g. meningitis) the dossier
+    does not — which would serve a high-dose guideline against standard PK yet stamp both
+    with the same `indication_resolved` label. An entry is labeled only when the variant
+    actually applied to it. Returned dicts are fresh, so callers cannot mutate the cache.
     """
     if not demo_enabled() or not drug:
         return None
@@ -121,12 +136,11 @@ def lookup(drug: str, indication: str | None = None) -> dict | None:
     if entry is None:
         return None
     dossier, resolved = _resolve_indication(entry, indication)
-    guideline, g_resolved = _resolve_indication(_load_guidelines().get(key) or {}, indication)
-    label = resolved or g_resolved
-    if label:
-        dossier["indication_resolved"] = label
-        if guideline:
-            guideline["indication_resolved"] = label
+    guideline, g_applied = _apply_variant(_load_guidelines().get(key) or {}, resolved)
+    if resolved:
+        dossier["indication_resolved"] = resolved
+        if g_applied:
+            guideline["indication_resolved"] = resolved
     return {
         "dossier": dossier,
         "guideline": guideline,

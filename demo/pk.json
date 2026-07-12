@@ -128,6 +128,14 @@
       "route_default": "iv",
       "indication_default": "neonatal sepsis / listeria",
       "notes": "time>MIC proxy",
+      "indications": {
+        "meningitis": {
+          "match": ["meningitis", "gbs meningitis", "cns"],
+          "indication_default": "GBS / listeria meningitis (high-dose)",
+          "typical_adult_dose_mg_per_day": 20000,
+          "notes": "meningitis high-dose (~2.5x standard); time>MIC proxy"
+        }
+      },
       "citations": [
         {
           "claim": "Curated adult PK for demo (ampicillin): CL=15.0 L/h, Vd=21.0 L, fm={'renal_gfr': 0.9}",
@@ -156,6 +164,14 @@
       "route_default": "iv",
       "indication_default": "serious gram-negative / meningitis",
       "notes": "time>MIC \u03b2-lactam",
+      "indications": {
+        "meningitis": {
+          "match": ["meningitis", "cns", "ventriculitis"],
+          "indication_default": "meningitis / CNS (high-dose)",
+          "typical_adult_dose_mg_per_day": 6000,
+          "notes": "meningitis doubles the dose; time>MIC \u03b2-lactam"
+        }
+      },
       "citations": [
         {
           "claim": "Curated adult PK for demo (meropenem): CL=15.0 L/h, Vd=21.0 L, fm={'renal_gfr': 0.7}",
@@ -186,6 +202,14 @@
       "route_default": "iv",
       "indication_default": "neonatal sepsis / meningitis",
       "notes": "active metabolite minor",
+      "indications": {
+        "meningitis": {
+          "match": ["meningitis", "cns"],
+          "indication_default": "meningitis (high-dose)",
+          "typical_adult_dose_mg_per_day": 8000,
+          "notes": "meningitis high-dose; active metabolite minor"
+        }
+      },
       "citations": [
         {
           "claim": "Curated adult PK for demo (cefotaxime): CL=18.0 L/h, Vd=25.0 L, fm={'renal_gfr': 0.6}",

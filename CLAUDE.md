@@ -14,6 +14,7 @@ engineering source of truth. `AGENT.md` holds the short version and routes here.
 3. Read Checklist.md for any task remaining and ask user if he want to continue remaining tasks. Also if the work is too long rather than saving work in plan.md use checklist.md for it.
 4. **NEVER merge branch `demo` into `master`.** Root `demo/` is offline curated PK for demos only.
 5. **NEVER merge branch `validation-eval` into `master`.** Harness oracles stay off the product path.
+6. Before making changes to any branches ask user which branch would be suited for changes.
 
 ## Demo branch (this branch)
 Root `demo/pk.json` + `demo/guidelines.json` + `backend/demo_pack.py`: when a listed drug is

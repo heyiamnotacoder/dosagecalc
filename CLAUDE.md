@@ -4,8 +4,6 @@ Pediatric dose-extrapolation agent. Derives a defensible **starting** dose for a
 from adult pharmacokinetics using allometry × organ maturation (Anderson–Holford), with a
 cited, auditable rationale. **Decision support, not prescribing.**
 
-The concept brief is `concept.html`; the product spec is `PRD.md`. This file is the
-engineering source of truth. `AGENT.md` holds the short version and routes here.
 
 ## RULES:
 1. If you want to check browser use browser harness first. if allow external debugging is not enabled ask user to do it. It is more token efficient.
@@ -76,26 +74,6 @@ Known pathway keys: `renal_gfr`, `cyp3a4`, `ugt2b7`, `cyp1a2`, `cyp2d6`, `cyp2c9
 **Edge cases:** `assess_edge_cases` flags prodrug/obesity/high-PB/illness when evidence exists.
 **PK cache:** `pk_cache.py` — max entries/bytes/TTL (env); single dyno shared; no multi-dyno Redis yet.
 
-## The seeded drugs
-Stage 1 = three archetypes. Stage 2 adds five more. Demo drugs primarily use
-`renal_gfr` / `cyp3a4` / `ugt2b7`; extra pathways support broader drug space without inventing curves.
-
-| Stage | Drug | Pathway | Metric | Edge to flag |
-|-------|------|---------|--------|--------------|
-| 1 | Midazolam | CYP3A4 | css | cleanest; high oral first-pass |
-| 1 | Vancomycin | renal (GFR) | auc | AUC/MIC-driven + **narrow TI → recommend TDM** |
-| 1 | Morphine | UGT2B7 | css | **active renally-cleared metabolite (M6G)** |
-| 2 | Gentamicin | renal (GFR) | cmax | **Cmax/MIC** aminoglycoside; **NTI → TDM**; extend interval in the young |
-| 2 | Amikacin | renal (GFR) | cmax | same Cmax/MIC aminoglycoside archetype |
-| 2 | Fentanyl | CYP3A4 | css | extreme potency (mcg dosing); CYP3A4-interaction-prone |
-| 2 | Ampicillin | renal (GFR) | css | **time>MIC** β-lactam — daily-dose match is only a proxy for fT>MIC |
-| 2 | Clindamycin | CYP3A4 | css | hepatic CYP3A4 antibiotic |
-
-Deliberately **excluded** (bad fit for the "match adult exposure" engine): digoxin,
-sildenafil, acetaminophen — their paediatric dosing is empirically de-linked from adult
-PK (or is multi-route with sulfation compensation), so a single-pathway extrapolation
-mis-predicts and would fail concordance.
-
 ## The agents (multi-agent)
 **Orchestrator** (`agent.py`, Opus) tools: `retrieve_drug_data` (→ retrieval subagent),
 `compute_pediatric_dose` (engine), `web_search` (guideline only), `submit_recommendation`
@@ -117,7 +95,7 @@ Grades: **A** passes concordance vs a real guideline · **B** solid PK, no guide
 ## Rules that must not regress
 - **Live retrieval or abstain.** Product path never reads `eval_data/`; unretrievable PK → grade D.
 - **Cite-or-abstain.** No unsourced PK value drives a confident point estimate (null it instead).
-- **Concordance band is 1.5× / 0.67×** (not the old 10%). Report the ratio.
+- **Concordance band is 1.5× / 0.67×** . Report the ratio.
 - **Mechanism is scored.** 6 dimensions vs `eval_data/mechanism_truth.json`; empty lists are
   correct-negatives — the model must not invent transporters/metabolites.
 - **PMA for under-2s.** If unknown, assume term AND surface that assumption.
@@ -145,7 +123,6 @@ subagent + orchestrator + guideline search). The <60 s target is the tuning goal
 
 ## Budget / scope
 Target < $1 and < 60 s per query. Default model `claude-opus-4-8` (override via
-`ORCHESTRATOR_MODEL`; `claude-sonnet-5` is the cheaper option). Sequential rollout:
-**3 drugs → 5–10 → 20**, gating on cost, concordance, and mechanistic-reasoning score.
-Not built yet (deferred per PRD): caching, DB, auth, Next.js migration, dose rounding to
+`ORCHESTRATOR_MODEL`; `claude-sonnet-5` is the cheaper option). 
+Not built yet : caching, DB, auth, dose rounding to
 available formulations.

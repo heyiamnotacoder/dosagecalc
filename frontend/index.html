@@ -205,6 +205,21 @@
   .neo.show{display:block}
   .neo strong{display:block;margin-bottom:8px}
   .hint{font-size:.78rem;color:var(--ink-3);margin-top:6px}
+  .cp-mode{margin-top:10px}
+  .cp-mode .seg{margin-bottom:10px}
+  .cp-pane{display:none}
+  .cp-pane.show{display:block}
+  .cp-preview{font-family:var(--mono);font-size:.82rem;margin-top:10px;padding:10px 12px;
+    background:#fff;border:1px solid #EBD9B4;border-radius:10px;color:#6b4a12}
+  .cp-preview b{color:var(--teal-deep)}
+  .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+    background:var(--teal-wash);color:var(--teal-deep);font-size:.8rem;font-weight:500}
+  .tag button{border:0;background:transparent;color:var(--teal-deep);cursor:pointer;font-size:.9rem;line-height:1;padding:0}
+  .avoid-list{list-style:none;padding:0;margin:0}
+  .avoid-list li{padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;
+    font-size:.9rem;color:var(--ink-2);background:#fff}
+  .avoid-list li.matched{border-color:#E8B4B4;background:var(--red-wash);color:#7a2a2a;font-weight:500}
   .calc-card .go{width:100%;margin-top:26px;padding:15px;font-size:1.02rem}
   .keyhint{font-family:var(--mono);font-size:.74rem;color:var(--ink-3);text-align:center;margin-top:14px}
   .keyhint.warn{color:var(--amber)}
@@ -660,6 +675,20 @@
       </div>
 
       <div class="field">
+        <label for="allergies">Allergies <span style="font-weight:400;color:var(--ink-3)">(optional)</span></label>
+        <input id="allergies" type="text" placeholder="e.g. penicillin, sulfa — comma-separated"
+               autocomplete="off">
+        <div class="hint">If the patient is allergic to this drug or class, the agent hard-stops (grade D) and withholds a dose.</div>
+      </div>
+
+      <div class="field">
+        <label for="conditions">Conditions to check <span style="font-weight:400;color:var(--ink-3)">(optional)</span></label>
+        <input id="conditions" type="text" placeholder="e.g. myasthenia gravis, severe hepatic failure"
+               autocomplete="off">
+        <div class="hint">Matched against label contraindications / major avoid situations. Unmatched conditions still appear in the avoid-list for review.</div>
+      </div>
+
+      <div class="field">
         <label>Organ function</label>
         <div class="toggles">
           <label class="toggle"><input type="checkbox" id="renal"> Renal impairment</label>
@@ -684,16 +713,56 @@
 
       <div class="neo" id="hepatic-detail">
         <strong>Hepatic function — noted, not auto-adjusted.</strong>
-        <div class="field" style="margin-top:8px">
-          <label for="child-pugh">Child-Pugh class</label>
-          <select id="child-pugh">
-            <option value="">— not specified —</option>
-            <option value="A">A (mild)</option>
-            <option value="B">B (moderate)</option>
-            <option value="C">C (severe)</option>
-          </select>
+        <div class="cp-mode" style="margin-top:8px">
+          <label>Child-Pugh</label>
+          <div class="seg" role="group" aria-label="Child-Pugh input mode">
+            <label><input type="radio" name="cp-mode" value="enter" checked><span class="opt">Enter class</span></label>
+            <label><input type="radio" name="cp-mode" value="calc"><span class="opt">Calculate from labs</span></label>
+          </div>
+          <div class="cp-pane show" id="cp-enter">
+            <label for="child-pugh">Child-Pugh class</label>
+            <select id="child-pugh">
+              <option value="">— not specified —</option>
+              <option value="A">A (mild)</option>
+              <option value="B">B (moderate)</option>
+              <option value="C">C (severe)</option>
+            </select>
+          </div>
+          <div class="cp-pane" id="cp-calc">
+            <div class="grid2">
+              <div>
+                <label for="bili">Total bilirubin (mg/dL)</label>
+                <input id="bili" type="number" step="0.1" min="0" placeholder="e.g. 1.2">
+              </div>
+              <div>
+                <label for="albumin">Albumin (g/dL)</label>
+                <input id="albumin" type="number" step="0.1" min="0" placeholder="e.g. 3.8">
+              </div>
+              <div>
+                <label for="inr">INR</label>
+                <input id="inr" type="number" step="0.01" min="0" placeholder="e.g. 1.1">
+              </div>
+              <div>
+                <label for="ascites">Ascites</label>
+                <select id="ascites">
+                  <option value="none">None</option>
+                  <option value="mild">Mild / slight</option>
+                  <option value="moderate">Moderate / severe</option>
+                </select>
+              </div>
+              <div>
+                <label for="enceph">Encephalopathy</label>
+                <select id="enceph">
+                  <option value="none">None</option>
+                  <option value="1-2">Grade 1–2</option>
+                  <option value="3-4">Grade 3–4</option>
+                </select>
+              </div>
+            </div>
+            <div class="cp-preview" id="cp-preview">Enter bilirubin, albumin, and INR to preview class.</div>
+          </div>
         </div>
-        <div class="hint">Hepatic dose adjustment is drug-specific — no automatic clearance reduction is applied; the class is surfaced as a note for drug-specific review.</div>
+        <div class="hint">Hepatic dose adjustment is drug-specific — no automatic clearance reduction is applied; the class is surfaced as a note for drug-specific review. Child-Pugh is an adult cirrhosis score; use with clinical judgment in children.</div>
       </div>
 
       <button class="btn go" id="go" type="submit">Reason to a dose →</button>
@@ -861,6 +930,42 @@ $("renal").addEventListener("change", checkOrgan);
 $("hepatic").addEventListener("change", checkOrgan);
 checkOrgan();
 
+/* ---------------- Child-Pugh enter vs calculate ---------------- */
+function cpMode(){
+  const mode = (document.querySelector('input[name="cp-mode"]:checked')||{}).value || "enter";
+  $("cp-enter").classList.toggle("show", mode==="enter");
+  $("cp-calc").classList.toggle("show", mode==="calc");
+  if(mode==="calc") updateCpPreview();
+}
+function biliPts(b){ return b<2?1:b<=3?2:3; }
+function albPts(a){ return a>3.5?1:a>=2.8?2:3; }
+function inrPts(i){ return i<1.7?1:i<=2.3?2:3; }
+function ascitesPts(v){ return v==="none"?1:v==="mild"?2:3; }
+function encephPts(v){ return v==="none"?1:v==="1-2"?2:3; }
+function updateCpPreview(){
+  const el = $("cp-preview");
+  if(!el) return;
+  const b = parseFloat($("bili").value), a = parseFloat($("albumin").value), i = parseFloat($("inr").value);
+  if(!Number.isFinite(b) || !Number.isFinite(a) || !Number.isFinite(i) || i<=0){
+    el.innerHTML = "Enter bilirubin, albumin, and INR to preview class.";
+    return;
+  }
+  const score = biliPts(b)+albPts(a)+inrPts(i)+ascitesPts($("ascites").value)+encephPts($("enceph").value);
+  const cls = score<=6?"A":score<=9?"B":"C";
+  el.innerHTML = `Preview: score <b>${score}</b> → Child-Pugh <b>${cls}</b> (server recomputes authoritatively)`;
+}
+document.querySelectorAll('input[name="cp-mode"]').forEach(r=>r.addEventListener("change", cpMode));
+["bili","albumin","inr","ascites","enceph"].forEach(id=>{
+  const el = $(id); if(el) el.addEventListener("input", updateCpPreview);
+  if(el) el.addEventListener("change", updateCpPreview);
+});
+cpMode();
+
+function splitList(s){
+  if(!s || !String(s).trim()) return [];
+  return String(s).split(/[,;]+/).map(x=>x.trim()).filter(Boolean);
+}
+
 /* ---------------- health / key hint ---------------- */
 fetch("/health").then(r=>r.json()).then(h=>{
   const el = $("keyhint");
@@ -1000,7 +1105,23 @@ $("form").addEventListener("submit", async (e)=>{
     if(Number.isFinite(scr) && scr > 0) payload.serum_creatinine_mg_dl = scr;
     if(Number.isFinite(ht) && ht > 0) payload.height_cm = ht;
   }
-  if($("hepatic").checked && $("child-pugh").value) payload.child_pugh = $("child-pugh").value;
+  if($("hepatic").checked){
+    const mode = (document.querySelector('input[name="cp-mode"]:checked')||{}).value || "enter";
+    if(mode==="calc"){
+      const b = parseFloat($("bili").value), a = parseFloat($("albumin").value), i = parseFloat($("inr").value);
+      if(Number.isFinite(b) && b>=0) payload.bilirubin_mg_dl = b;
+      if(Number.isFinite(a) && a>=0) payload.albumin_g_dl = a;
+      if(Number.isFinite(i) && i>0) payload.inr = i;
+      payload.ascites = $("ascites").value || "none";
+      payload.encephalopathy = $("enceph").value || "none";
+    } else if($("child-pugh").value){
+      payload.child_pugh = $("child-pugh").value;
+    }
+  }
+  const allergies = splitList($("allergies").value);
+  const conditions = splitList($("conditions").value);
+  if(allergies.length) payload.allergies = allergies;
+  if(conditions.length) payload.conditions = conditions;
   currentCase = payload;
 
   // prep loading screen
@@ -1085,7 +1206,9 @@ function renderResult(data){
   const c = currentCase, dn = (DRUGS[c.drug]||{}).name||c.drug;
   $("case-sum").innerHTML = `<b>${esc(dn)}</b> · ${c.age_years} yr · ${c.weight_kg} kg · ${esc(c.route)}`
     + (c.indication?` · ${esc(c.indication)}`:"")
-    + (c.renal_impairment?` · renal impairment`:"") + (c.hepatic_impairment?` · hepatic impairment`:"");
+    + (c.renal_impairment?` · renal impairment`:"") + (c.hepatic_impairment?` · hepatic impairment`:"")
+    + (c.allergies&&c.allergies.length?` · allergies: ${esc(c.allergies.join(", "))}`:"")
+    + (c.conditions&&c.conditions.length?` · conditions: ${esc(c.conditions.join(", "))}`:"");
 
   let h = `<div class="panel">`;
 
@@ -1133,9 +1256,29 @@ function renderResult(data){
   const flags = r.flags||[];
   if(flags.length){
     h += `<div class="sec"><h3>Flags &amp; warnings</h3>`;
-    flags.forEach(f=>{ const stop=/exceed|toxic|do not|below|sub-therapeutic|safety stop/i.test(f);
+    flags.forEach(f=>{ const stop=/exceed|toxic|do not|below|sub-therapeutic|safety stop|contraindicat/i.test(f);
       h += `<div class="flag ${stop?"stop":""}">${esc(f)}</div>`; });
     h += `</div>`;
+  }
+
+  // avoid this drug — full contraindication / caution list
+  const avoid = r.contraindications_avoid || [];
+  const matched = (r.contraindication_matched || "").trim();
+  if(avoid.length || matched){
+    h += `<div class="sec"><h3>Avoid this drug when…</h3>`;
+    if(matched){
+      h += `<div class="flag stop" style="margin-bottom:10px">Matched for this patient: ${esc(matched)}</div>`;
+    }
+    if(avoid.length){
+      h += `<ul class="avoid-list">`;
+      avoid.forEach(item=>{
+        const s = String(item||"");
+        const isMatch = matched && (s.toLowerCase().includes(matched.toLowerCase()) || matched.toLowerCase().includes(s.toLowerCase().slice(0,24)));
+        h += `<li class="${isMatch?"matched":""}">${esc(s)}</li>`;
+      });
+      h += `</ul>`;
+    }
+    h += `<div class="hint">Decision support only — verify against the full label and the child’s chart before any order.</div></div>`;
   }
 
   // rationale

@@ -36,20 +36,28 @@ Pipeline (lean):
 2. retrieve_drug_data FIRST — only PK source (demo pack | live | shared cache). Null/unavailable → grade D, no invented numbers.
    On source_mode=demo the payload may include a `guideline` object (pediatric midpoints) — use it for concordance;
    still web_search only if guideline is missing or age-band is unclear.
-3. compute_pediatric_dose with retrieved PK + child covariates (use case renal/hepatic fractions).
+3. CONTRAINDICATIONS (before or with dosing): from the label/dossier + clinical knowledge, list
+   situations where this drug should be AVOIDED in contraindications_avoid (allergy/class
+   cross-reactivity, absolute contraindications, major condition warnings). Compare to case
+   allergies[] and conditions[]. If the patient MATCHES a true contraindication (e.g. allergy
+   to this drug or class, absolute contraindication present), HARD STOP: final_dose_* = null,
+   grade = D, blocked=true, block_reason = "SAFETY STOP — CONTRAINDICATED: …", and put that
+   string as the FIRST flag. Never invent a dose for a contraindicated patient. Always still
+   fill contraindications_avoid so the clinician sees the full avoid-list.
+4. compute_pediatric_dose with retrieved PK + child covariates (use case renal/hepatic fractions).
    Pass oral_bioavailability from the dossier; if a route is clinically non-viable (e.g. an oral
    route for a drug not systemically absorbed orally, F=0), pass routes_allowed (e.g. ["iv"]).
    If compute returns blocked=true the case is NOT prescribable: submit_recommendation with
    final_dose_mg_per_kg_per_day AND final_dose_mg_per_day = null, grade = D, and block_reason
    verbatim as the FIRST flag. Never fabricate or carry forward a dose for a blocked case.
-4. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
-5. Concordance 0.67×–1.5× vs guideline (demo-attached or web_search). None → grade B.
-6. Grade A/B/C/D; flag NTI→TDM, metabolites, oral-F, assumed-term, exposure-matching PD assumption.
+5. load_skill('edge_cases') + assess_edge_cases when relevant; merge flags.
+6. Concordance 0.67×–1.5× vs guideline (demo-attached or web_search). None → grade B.
+7. Grade A/B/C/D; flag NTI→TDM, metabolites, oral-F, assumed-term, exposure-matching PD assumption.
    If the retrieved dossier carries an `engine_limitation` object, the linear allometry×maturation
    engine is the WRONG model for this drug: you MUST (a) add a prominent flag quoting its
    `explanation`, and (b) cap `grade` at its `grade_ceiling` (never grade above it). Present the
    computed dose as directional only — this is a deliberate "where the model fails and why" case.
-7. submit_recommendation once, last. Lean reasoning. Flag toxic/sub-therapeutic doses."""
+8. submit_recommendation once, last. Lean reasoning. Flag toxic/sub-therapeutic doses."""
 
 TOOLS = [
     {
@@ -166,6 +174,25 @@ TOOLS = [
                 "assumptions": {"type": "array", "items": {"type": "string"}},
                 "uncertainty": {"type": "string"},
                 "flags": {"type": "array", "items": {"type": "string"}},
+                "contraindications_avoid": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Conditions / situations where this drug should be avoided "
+                                   "(allergy class, absolute CIs, major warnings). Always fill.",
+                },
+                "contraindication_matched": {
+                    "type": ["string", "null"],
+                    "description": "If patient allergies/conditions match a true CI, the "
+                                   "matched reason; else null.",
+                },
+                "blocked": {
+                    "type": "boolean",
+                    "description": "true when not prescribable (contraindication, route, toxic).",
+                },
+                "block_reason": {
+                    "type": ["string", "null"],
+                    "description": "SAFETY STOP reason when blocked.",
+                },
                 "citations": {
                     "type": "array",
                     "items": {
@@ -174,7 +201,8 @@ TOOLS = [
                     },
                 },
             },
-            "required": ["mechanism", "grade", "grade_rationale", "rationale", "flags"],
+            "required": ["mechanism", "grade", "grade_rationale", "rationale", "flags",
+                         "contraindications_avoid"],
         },
     },
 ]
@@ -214,7 +242,8 @@ def _normalize_case(case: dict) -> dict:
     serum creatinine + height). If labs are absent we apply NO reduction (fraction
     1.0) and rely on a data-gap flag — never a silent flat 0.5.
     Hepatic: no automatic clearance reduction; adjustment is drug-specific and is
-    surfaced as a note (see _organ_function_flags).
+    surfaced as a note (see _organ_function_flags). Child-Pugh class may be entered
+    or calculated from labs (bilirubin, albumin, INR ± ascites/encephalopathy).
     """
     c = dict(case)
     if "renal_function_fraction" not in c:
@@ -229,6 +258,32 @@ def _normalize_case(case: dict) -> dict:
         c["renal_function_fraction"] = frac if frac is not None else 1.0
     if "hepatic_function_fraction" not in c:
         c["hepatic_function_fraction"] = 1.0  # drug-specific; note instead of flat modifier
+    # Child-Pugh: calculate from labs when present, else keep entered A/B/C
+    try:
+        from engine.child_pugh import resolve_child_pugh
+        cp_patch = resolve_child_pugh(c)
+        c.update(cp_patch)
+    except Exception:
+        pass
+    # Normalize allergies/conditions to clean string lists
+    for key in ("allergies", "conditions"):
+        raw = c.get(key)
+        if raw is None:
+            c[key] = []
+        elif isinstance(raw, str):
+            c[key] = [p.strip() for p in raw.replace(";", ",").split(",") if p.strip()]
+        elif isinstance(raw, list):
+            c[key] = [str(x).strip() for x in raw if str(x).strip()]
+        else:
+            c[key] = []
+    # Light deterministic allergy↔drug name overlap hint (agent still decides hard-stop)
+    try:
+        from engine.child_pugh import allergy_tokens_overlap
+        hits = allergy_tokens_overlap(c.get("allergies"), c.get("drug") or "")
+        if hits:
+            c["allergy_name_overlap_hint"] = hits
+    except Exception:
+        pass
     # postnatal days → weeks for engine if provided
     if c.get("postnatal_age_days") is not None and c.get("postnatal_age_weeks") is None:
         try:
@@ -263,7 +318,17 @@ def _organ_function_flags(case: dict) -> list[str]:
             )
     if case.get("hepatic_impairment"):
         cp = case.get("child_pugh")
-        cp_txt = f"Child-Pugh {str(cp).upper()} noted; " if cp else ""
+        src = case.get("child_pugh_source")
+        score = case.get("child_pugh_score")
+        if cp:
+            src_txt = ""
+            if src == "calculated" and score is not None:
+                src_txt = f" (calculated score {score})"
+            elif src == "entered":
+                src_txt = " (entered)"
+            cp_txt = f"Child-Pugh {str(cp).upper()}{src_txt} noted; "
+        else:
+            cp_txt = ""
         flags.append(
             f"HEPATIC impairment: {cp_txt}dose adjustment is DRUG-SPECIFIC (depends on the drug's "
             "hepatic extraction ratio and metabolic pathway). No automatic clearance reduction was "
@@ -347,6 +412,30 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                     if not any("SAFETY STOP" in str(f) for f in flags):
                         flags.insert(0, stop_flag)
                     rec["flags"] = flags
+                # Model-reported contraindication hard-stop: force null dose + grade D.
+                matched = rec.get("contraindication_matched")
+                matched_s = str(matched).strip() if matched is not None else ""
+                br = str(rec.get("block_reason") or "")
+                ci_hit = bool(matched_s) or "CONTRAINDICATED" in br.upper()
+                if ci_hit:
+                    reason = br if "CONTRAINDICATED" in br.upper() else (
+                        f"SAFETY STOP — CONTRAINDICATED: {matched_s or br or 'patient matches a listed contraindication'}"
+                    )
+                    if not reason.upper().startswith("SAFETY"):
+                        reason = f"SAFETY STOP — CONTRAINDICATED: {reason}"
+                    rec["final_dose_mg_per_kg_per_day"] = None
+                    rec["final_dose_mg_per_day"] = None
+                    rec["grade"] = "D"
+                    rec["blocked"] = True
+                    rec["block_reason"] = reason
+                    flags = list(rec.get("flags") or [])
+                    if not any("CONTRAINDICATED" in str(f).upper() for f in flags):
+                        flags.insert(0, reason)
+                    rec["flags"] = flags
+                # Ensure avoid-list is always a list (even if model omitted)
+                avoid = rec.get("contraindications_avoid")
+                if not isinstance(avoid, list):
+                    rec["contraindications_avoid"] = []
                 # Authoritative renal/hepatic-impairment flags (model-independent).
                 _apply_organ_function_flags(rec, case)
                 return {

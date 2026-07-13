@@ -212,6 +212,44 @@ def test_mechanism_scorer():
     print("  mechanism scorer: perfect=1.0, invented-enzyme miss caught  OK")
 
 
+def test_child_pugh():
+    """Child-Pugh class from labs: normal → A; high scores → C; resolve prefers calc."""
+    from engine.child_pugh import compute_child_pugh, resolve_child_pugh, allergy_tokens_overlap
+
+    mild = compute_child_pugh(
+        bilirubin_mg_dl=1.0, albumin_g_dl=4.0, inr=1.1,
+        ascites="none", encephalopathy="none",
+    )
+    assert mild["score"] == 5 and mild["class"] == "A", mild
+
+    severe = compute_child_pugh(
+        bilirubin_mg_dl=4.0, albumin_g_dl=2.5, inr=2.5,
+        ascites="moderate", encephalopathy="3-4",
+    )
+    assert severe["score"] == 15 and severe["class"] == "C", severe
+
+    # 2+2+2+1+1 = 8 → class B
+    mid = compute_child_pugh(
+        bilirubin_mg_dl=2.5, albumin_g_dl=3.0, inr=2.0,
+        ascites="none", encephalopathy="none",
+    )
+    assert mid["class"] == "B" and 7 <= mid["score"] <= 9, mid
+
+    patch = resolve_child_pugh({
+        "bilirubin_mg_dl": 1.0, "albumin_g_dl": 4.0, "inr": 1.0,
+        "child_pugh": "C",  # labs win when complete
+    })
+    assert patch["child_pugh"] == "A" and patch["child_pugh_source"] == "calculated"
+
+    entered = resolve_child_pugh({"child_pugh": "b"})
+    assert entered["child_pugh"] == "B" and entered["child_pugh_source"] == "entered"
+
+    hits = allergy_tokens_overlap(["penicillin", "vancomycin"], "Vancomycin")
+    assert any("vancomycin" in h.lower() for h in hits), hits
+    assert allergy_tokens_overlap(["penicillin"], "Vancomycin") == []
+    print("  child_pugh: A/B/C + resolve + allergy overlap  OK")
+
+
 def concordance_check():
     """Score seed-based estimates against the guideline JSON."""
     with open(os.path.join(EVAL, "guidelines.json")) as f:
@@ -267,5 +305,6 @@ if __name__ == "__main__":
     test_safety_bounds_fire()
     test_route_not_viable_hard_stop()
     test_mechanism_scorer()
+    test_child_pugh()
     concordance_check()
     print("\nAll structural tests passed.")

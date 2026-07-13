@@ -73,6 +73,15 @@ class Case(BaseModel):
     serum_creatinine_mg_dl: float | None = None  # for bedside-Schwartz eGFR when renal-impaired
     height_cm: float | None = None               # required alongside creatinine for Schwartz
     child_pugh: str | None = None                # "A" | "B" | "C" — noted only (drug-specific)
+    # Child-Pugh calculate-from-labs mode (optional; server computes class when all three labs set)
+    bilirubin_mg_dl: float | None = None
+    albumin_g_dl: float | None = None
+    inr: float | None = None
+    ascites: str | None = None                   # none | mild | moderate
+    encephalopathy: str | None = None            # none | 1-2 | 3-4
+    # Safety context for contraindication hard-stop / avoid-list
+    allergies: list[str] | None = None
+    conditions: list[str] | None = None
     route: str = "iv"  # "iv" | "oral" — governs the oral-bioavailability correction
 
 

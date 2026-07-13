@@ -181,7 +181,8 @@ def compute_pediatric_dose(
     toxic_dose_mg_per_kg_per_day: Optional[float] = None,
     effective_dose_mg_per_kg_per_day: Optional[float] = None,
     route: str = "iv",                      # child administration route ("iv" | "oral")
-    oral_bioavailability: float = 1.0,      # pediatric F; applied only when route == "oral"
+    # None = unknown F (oral hard-stops as data gap). Do not default to 1.0 — that invents absorption.
+    oral_bioavailability: Optional[float] = None,
     routes_allowed: Optional[list[str]] = None,  # explicit viable routes; None = infer from F
     assume_term: bool = True,
 ) -> DoseResult:

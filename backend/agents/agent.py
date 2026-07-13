@@ -249,15 +249,16 @@ def _build_compute(case: dict, state: dict):
 
     Injects authoritative organ fractions / route / safety bounds from the case and
     last dossier so the model cannot omit renal OF or invent PK after abstention.
+    Dossier CL/Vd/fm/F/toxic/effective always win when present (not fill-if-omitted).
     """
     def _compute(args: dict) -> dict:
         # Live-or-abstain: refuse compute without a successful retrieval of core PK.
+        # Recoverable — do NOT latch sticky blocked_reason (that is for real engine hard-stops).
         if state.get("pk_block_reason") or not state.get("pk_ok"):
             reason = state.get("pk_block_reason") or (
                 "SAFETY STOP — no cited adult PK retrieved; call retrieve_drug_data "
                 "successfully before compute (cite-or-abstain)."
             )
-            state["blocked_reason"] = reason
             return {
                 "error": reason,
                 "blocked": True,
@@ -266,7 +267,14 @@ def _build_compute(case: dict, state: dict):
                 "recommended_dose_mg_per_kg_per_day": None,
             }
         try:
-            merged = {k: v for k, v in (args or {}).items() if k in _COMPUTE_KEYS and v is not None}
+            # Keep explicit nulls for oral_bioavailability (unknown F must reach the engine).
+            merged: dict = {}
+            for k, v in (args or {}).items():
+                if k not in _COMPUTE_KEYS:
+                    continue
+                if v is None and k != "oral_bioavailability":
+                    continue
+                merged[k] = v
             # Authoritative organ function from normalized case (not model defaults).
             if case.get("renal_function_fraction") is not None:
                 merged["renal_function_fraction"] = case["renal_function_fraction"]
@@ -282,24 +290,27 @@ def _build_compute(case: dict, state: dict):
                     merged[k] = case[k]
             if "drug" not in merged and case.get("drug"):
                 merged["drug"] = case["drug"]
-            # Wire dossier toxic/effective/F when model omits them.
             dossier = state.get("last_dossier") or {}
-            for k in ("toxic_dose_mg_per_kg_per_day", "effective_dose_mg_per_kg_per_day",
-                      "oral_bioavailability"):
-                if k not in merged and dossier.get(k) is not None:
-                    merged[k] = dossier[k]
             # Prefer retrieved adult dose when model omits it.
             if "adult_dose_mg_per_day" not in merged and dossier.get("typical_adult_dose_mg_per_day") is not None:
                 merged["adult_dose_mg_per_day"] = dossier["typical_adult_dose_mg_per_day"]
-            # Prefer retrieved CL/Vd/fm/metric over model invention when dossier has them.
+            # Authoritative dossier fields — always override model invention when present.
             if dossier.get("cl_adult_l_h") is not None:
                 merged["cl_adult_l_h"] = dossier["cl_adult_l_h"]
             if dossier.get("vd_adult_l") is not None:
                 merged["vd_adult_l"] = dossier["vd_adult_l"]
             if dossier.get("fm"):
                 merged["fm"] = dossier["fm"]
-            if dossier.get("target_metric") and "target_metric" not in (args or {}):
+            if dossier.get("target_metric"):
                 merged["target_metric"] = dossier["target_metric"]
+            for k in ("toxic_dose_mg_per_kg_per_day", "effective_dose_mg_per_kg_per_day",
+                      "oral_bioavailability"):
+                if k in dossier and dossier[k] is not None:
+                    merged[k] = dossier[k]
+            # Oral + unknown F: pass None so the engine hard-stops (do not invent F=1.0).
+            route = (merged.get("route") or case.get("route") or "iv").lower()
+            if route == "oral" and "oral_bioavailability" not in merged:
+                merged["oral_bioavailability"] = None
 
             state["last_compute_renal_frac"] = merged.get(
                 "renal_function_fraction", case.get("renal_function_fraction", 1.0)
@@ -308,6 +319,10 @@ def _build_compute(case: dict, state: dict):
             out = result_to_dict(r)
             if out.get("blocked"):
                 state["blocked_reason"] = out.get("block_reason") or "not prescribable"
+            else:
+                # Successful non-blocked compute clears a prior engine latch only if
+                # this run is prescribable (PK-not-ready never latched blocked_reason).
+                state["blocked_reason"] = None
             return out
         except Exception as e:
             return {"error": str(e)}
@@ -356,7 +371,7 @@ def _normalize_case(case: dict) -> dict:
             c[key] = [str(x).strip() for x in raw if str(x).strip()]
         else:
             c[key] = []
-    # Light deterministic allergy↔drug name overlap hint (agent still decides hard-stop)
+    # Same-drug allergy token overlap → deterministic submit hard-stop (not model-optional).
     try:
         from engine.child_pugh import allergy_tokens_overlap
         hits = allergy_tokens_overlap(c.get("allergies"), c.get("drug") or "")

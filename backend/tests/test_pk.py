@@ -238,13 +238,16 @@ def test_empty_and_over_sum_fm_hard_stop():
 
 
 def test_ssrf_guard():
-    """web_fetch must refuse loopback/private targets before connecting."""
-    from retrieval.retrieval_tools import web_fetch
+    """web_fetch must refuse loopback/private targets but allow public hostnames through the guard."""
+    from retrieval.retrieval_tools import web_fetch, _ssrf_guard
     for url in ("http://127.0.0.1/", "http://localhost/foo", "http://169.254.169.254/latest"):
         r = web_fetch(url)
         assert r.get("text") == ""
         assert "SSRF" in (r.get("error") or ""), (url, r)
-    print("  web_fetch SSRF guard: loopback/metadata blocked  OK")
+    # Public DNS names must not be treated as blocked IPs (the PR-1 regression).
+    assert _ssrf_guard("https://example.com/") is None, _ssrf_guard("https://example.com/")
+    assert _ssrf_guard("https://pubmed.ncbi.nlm.nih.gov/") is None
+    print("  web_fetch SSRF guard: loopback blocked, public hosts allowed  OK")
 
 
 def test_compute_injects_renal_and_blocks_without_pk():
@@ -271,6 +274,8 @@ def test_compute_injects_renal_and_blocks_without_pk():
         "fm": {"renal_gfr": 0.9}, "age_years": 6, "adult_dose_mg_per_day": 2000,
     })
     assert denied.get("blocked") and denied.get("recommended_dose_mg_per_kg_per_day") is None
+    # Premature compute must NOT sticky-latch blocked_reason (recoverable tool order).
+    assert state["blocked_reason"] is None
 
     state["pk_ok"] = True
     state["pk_block_reason"] = None
@@ -285,6 +290,8 @@ def test_compute_injects_renal_and_blocks_without_pk():
         # deliberate omit renal_function_fraction
     })
     assert not out.get("error"), out
+    assert not out.get("blocked"), out
+    assert state["blocked_reason"] is None  # successful compute keeps/clears latch
     assert state["last_compute_renal_frac"] == case["renal_function_fraction"]
     # Dossier CL/Vd override model invention; renal OF applied (compare unrounded path OF)
     ref = compute_pediatric_dose(
@@ -301,7 +308,60 @@ def test_compute_injects_renal_and_blocks_without_pk():
         renal_function_fraction=1.0,
     )
     assert ref.cl_child_l_h < ref_full.cl_child_l_h * 0.5
-    print("  compute: PK abstain + renal OF inject + dossier PK override  OK")
+    print("  compute: PK abstain + no sticky latch + renal OF + dossier PK  OK")
+
+
+def test_compute_forces_dossier_f_and_toxic():
+    """Dossier F and toxic bounds always win; oral + unknown F hard-stops via product path."""
+    from agents.agent import _build_compute, _normalize_case
+
+    case = _normalize_case({
+        "drug": "midazolam", "age_years": 6, "weight_kg": 20, "route": "oral",
+    })
+    state = {
+        "pk_ok": True, "pk_block_reason": None, "blocked_reason": None,
+        "last_compute_renal_frac": None,
+        "last_dossier": {
+            "cl_adult_l_h": 24.0, "vd_adult_l": 70.0, "fm": {"cyp3a4": 0.95},
+            "typical_adult_dose_mg_per_day": 100.0,
+            "oral_bioavailability": 0.4,
+            "toxic_dose_mg_per_kg_per_day": 0.01,  # very low → any real dose blocks
+        },
+    }
+    compute = _build_compute(case, state)
+
+    # Model invents F=1.0 and a huge toxic ceiling — dossier must override both.
+    out = compute({
+        "drug": "midazolam", "weight_kg": 20, "cl_adult_l_h": 24, "vd_adult_l": 70,
+        "fm": {"cyp3a4": 0.95}, "age_years": 6, "adult_dose_mg_per_day": 100,
+        "route": "oral", "oral_bioavailability": 1.0,
+        "toxic_dose_mg_per_kg_per_day": 9999,
+    })
+    assert out.get("blocked"), out
+    assert "TOXIC" in (out.get("block_reason") or "").upper() or any(
+        "TOXIC" in w for w in (out.get("warnings") or [])
+    )
+    assert state["blocked_reason"]  # real engine hard-stop latches
+
+    # Oral with no F in dossier or args → unknown-F data-gap stop (not F=1.0).
+    state2 = {
+        "pk_ok": True, "pk_block_reason": None, "blocked_reason": None,
+        "last_compute_renal_frac": None,
+        "last_dossier": {
+            "cl_adult_l_h": 24.0, "vd_adult_l": 70.0, "fm": {"cyp3a4": 0.95},
+            "typical_adult_dose_mg_per_day": 100.0,
+            # oral_bioavailability deliberately absent
+        },
+    }
+    out2 = _build_compute(case, state2)({
+        "drug": "midazolam", "weight_kg": 20, "cl_adult_l_h": 24, "vd_adult_l": 70,
+        "fm": {"cyp3a4": 0.95}, "age_years": 6, "adult_dose_mg_per_day": 100,
+        "route": "oral",
+    })
+    assert out2.get("blocked"), out2
+    assert "unknown" in (out2.get("block_reason") or "").lower()
+    assert "F=0" not in (out2.get("block_reason") or "")
+    print("  compute: dossier F/toxic forced; unknown oral F hard-stop  OK")
 
 
 def test_allergy_normalize_hint():
@@ -424,6 +484,7 @@ if __name__ == "__main__":
     test_empty_and_over_sum_fm_hard_stop()
     test_ssrf_guard()
     test_compute_injects_renal_and_blocks_without_pk()
+    test_compute_forces_dossier_f_and_toxic()
     test_allergy_normalize_hint()
     test_mechanism_scorer()
     test_child_pugh()

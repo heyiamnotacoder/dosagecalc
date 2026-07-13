@@ -110,12 +110,25 @@ def openfda_label(drug: str, max_field_chars: int = 1500) -> dict:
         return {"drug": drug, "found": False, "error": f"openfda_label failed: {e}"}
 
 
+def _is_literal_ip(host: str) -> bool:
+    """True when `host` is a literal IPv4/IPv6 address (not a DNS name)."""
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
 def _is_blocked_ip(ip_str: str) -> bool:
-    """True for private, loopback, link-local, multicast, reserved, or unspecified addresses."""
+    """True for private, loopback, link-local, multicast, reserved, or unspecified addresses.
+
+    Returns False when `ip_str` is not a parseable IP (callers must only pass
+    literal IPs or resolved addresses — never hostnames).
+    """
     try:
         addr = ipaddress.ip_address(ip_str)
     except ValueError:
-        return True
+        return False
     return bool(
         addr.is_private
         or addr.is_loopback
@@ -139,12 +152,9 @@ def _ssrf_guard(url: str) -> str | None:
         return "url missing hostname"
     if host in _BLOCKED_HOSTS or host.endswith(".local") or host.endswith(".internal"):
         return f"SSRF blocked: hostname '{host}' is not allowed"
-    # Literal IP in the URL
-    try:
-        if _is_blocked_ip(host):
-            return f"SSRF blocked: address '{host}' is not a public IP"
-    except Exception:
-        pass
+    # Literal IP in the URL only (do not treat DNS names as blocked IPs).
+    if _is_literal_ip(host) and _is_blocked_ip(host):
+        return f"SSRF blocked: address '{host}' is not a public IP"
     # DNS resolve and reject any non-public A/AAAA
     try:
         infos = socket.getaddrinfo(host, None)

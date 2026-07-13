@@ -11,7 +11,10 @@ raises, so a flaky fetch degrades gracefully instead of crashing the dosing requ
 
 from __future__ import annotations
 
+import ipaddress
 import os
+import socket
+from urllib.parse import urlparse
 
 import httpx
 
@@ -20,6 +23,12 @@ OPENFDA_LABEL = "https://api.fda.gov/drug/label.json"
 _TOOL = "paedscale"
 _EMAIL = os.environ.get("NCBI_EMAIL", "paedscale@example.com")
 _TIMEOUT = float(os.environ.get("RETRIEVAL_HTTP_TIMEOUT", "12"))
+
+# Hostnames that must never be fetched (SSRF).
+_BLOCKED_HOSTS = frozenset({
+    "localhost", "localhost.localdomain", "metadata", "metadata.google.internal",
+    "metadata.goog", "instance-data",
+})
 
 
 def _ncbi_params(extra: dict) -> dict:
@@ -101,18 +110,77 @@ def openfda_label(drug: str, max_field_chars: int = 1500) -> dict:
         return {"drug": drug, "found": False, "error": f"openfda_label failed: {e}"}
 
 
+def _is_blocked_ip(ip_str: str) -> bool:
+    """True for private, loopback, link-local, multicast, reserved, or unspecified addresses."""
+    try:
+        addr = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return True
+    return bool(
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_multicast
+        or addr.is_reserved
+        or addr.is_unspecified
+    )
+
+
+def _ssrf_guard(url: str) -> str | None:
+    """Return an error message if URL is not safe to fetch; else None."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return "invalid URL"
+    if parsed.scheme not in ("http", "https"):
+        return "url must start with http:// or https://"
+    host = (parsed.hostname or "").strip().lower()
+    if not host:
+        return "url missing hostname"
+    if host in _BLOCKED_HOSTS or host.endswith(".local") or host.endswith(".internal"):
+        return f"SSRF blocked: hostname '{host}' is not allowed"
+    # Literal IP in the URL
+    try:
+        if _is_blocked_ip(host):
+            return f"SSRF blocked: address '{host}' is not a public IP"
+    except Exception:
+        pass
+    # DNS resolve and reject any non-public A/AAAA
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror as e:
+        return f"SSRF blocked: cannot resolve host '{host}': {e}"
+    if not infos:
+        return f"SSRF blocked: no addresses for '{host}'"
+    for info in infos:
+        ip = info[4][0]
+        if _is_blocked_ip(ip):
+            return f"SSRF blocked: '{host}' resolves to non-public address {ip}"
+    return None
+
+
 def web_fetch(url: str, max_chars: int = 10000) -> dict:
-    """Fetch plain text from a URL (size-capped). For guidelines/labels when PMID/openFDA lack a number."""
+    """Fetch plain text from a public URL (size-capped). SSRF-guarded; no redirects."""
     url = (url or "").strip()
     if not url.startswith(("http://", "https://")):
         return {"url": url, "text": "", "error": "url must start with http:// or https://"}
+    ssrf_err = _ssrf_guard(url)
+    if ssrf_err:
+        return {"url": url, "text": "", "error": ssrf_err}
     try:
+        # No redirects: a 30x to 169.254.169.254 or an internal host would bypass the pre-check.
         r = httpx.get(
             url,
             timeout=_TIMEOUT,
-            follow_redirects=True,
+            follow_redirects=False,
             headers={"User-Agent": "PaedScale/0.2 (pediatric-dosing-research; educational)"},
         )
+        if r.status_code in (301, 302, 303, 307, 308):
+            loc = r.headers.get("location", "")
+            return {
+                "url": url, "text": "",
+                "error": f"redirects disabled (SSRF guard); got {r.status_code} → {loc[:200]}",
+            }
         r.raise_for_status()
         ctype = (r.headers.get("content-type") or "").lower()
         if "pdf" in ctype or url.lower().endswith(".pdf"):

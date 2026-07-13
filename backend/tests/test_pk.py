@@ -91,7 +91,10 @@ def test_new_pathways_accepted():
 def test_pk_cache():
     from engine.pk_cache import PkCache
     c = PkCache(max_entries=2, max_bytes=50_000, ttl_seconds=3600)
-    d = {"cl_adult_l_h": 5.0, "vd_adult_l": 20.0, "fm": {"renal_gfr": 1.0}}
+    d = {
+        "cl_adult_l_h": 5.0, "vd_adult_l": 20.0, "fm": {"renal_gfr": 1.0},
+        "citations": [{"claim": "CL", "source": "PMID:1"}],
+    }
     assert c.set("gentamicin", "sepsis", d, "live")
     hit = c.get("gentamicin", "sepsis")
     assert hit and hit["dossier"]["cl_adult_l_h"] == 5.0
@@ -99,7 +102,15 @@ def test_pk_cache():
     assert c.set("amikacin", None, d, "live")  # evicts oldest
     assert c.get("gentamicin", "sepsis") is None  # LRU evicted
     assert not c.set("x", None, d, "unavailable")
-    print("  pk_cache: LRU + reject unavailable  OK")
+    # reject uncited or partial core PK (no cache poison)
+    assert not c.set("bad", None, {
+        "cl_adult_l_h": 5.0, "vd_adult_l": 20.0, "citations": [],
+    }, "live")
+    assert not c.set("partial", None, {
+        "cl_adult_l_h": 5.0, "vd_adult_l": None,
+        "citations": [{"claim": "CL", "source": "x"}],
+    }, "live")
+    print("  pk_cache: LRU + reject unavailable/uncited/partial  OK")
 
 
 def test_edge_cases():
@@ -188,6 +199,15 @@ def test_route_not_viable_hard_stop():
     )
     assert r.blocked and r.recommended_dose_mg_per_kg_per_day is None
     assert "ROUTE NOT VIABLE" in r.block_reason
+    # Unknown F is a data gap — block WITHOUT claiming F=0
+    r_unk = compute_pediatric_dose(
+        drug="mystery_oral", weight_kg=12, cl_adult_l_h=5.0, vd_adult_l=20.0,
+        fm={"renal_gfr": 1.0}, target_metric="css", age_years=2,
+        adult_dose_mg_per_day=100, route="oral", oral_bioavailability=None,
+    )
+    assert r_unk.blocked and r_unk.recommended_dose_mg_per_kg_per_day is None
+    assert "unknown" in r_unk.block_reason.lower()
+    assert "F=0" not in r_unk.block_reason
     # same drug IV must still solve a dose
     r_iv = compute_pediatric_dose(
         drug="gentamicin", weight_kg=12, cl_adult_l_h=s["cl_adult_l_h"],
@@ -195,7 +215,104 @@ def test_route_not_viable_hard_stop():
         age_years=2, adult_dose_mg_per_day=s["typical_adult_dose_mg_per_day"], route="iv",
     )
     assert not r_iv.blocked and r_iv.recommended_dose_mg_per_kg_per_day is not None
-    print("  route viability: oral F=0 HARD STOPPED, IV unaffected  OK")
+    print("  route viability: oral F=0 HARD STOPPED, unknown F data-gap, IV OK  OK")
+
+
+def test_empty_and_over_sum_fm_hard_stop():
+    """Empty fm or over-sum fm must not produce a recommended dose."""
+    common = dict(
+        drug="probe", weight_kg=10, cl_adult_l_h=20, vd_adult_l=50,
+        age_years=1, adult_dose_mg_per_day=100,
+    )
+    empty = compute_pediatric_dose(fm={}, **common)
+    assert empty.blocked and empty.recommended_dose_mg_per_kg_per_day is None
+    assert "empty" in empty.block_reason.lower() or "zero fm" in empty.block_reason.lower()
+
+    over = compute_pediatric_dose(fm={"renal_gfr": 0.8, "cyp3a4": 0.5}, **common)  # 1.3
+    assert over.blocked and over.recommended_dose_mg_per_kg_per_day is None
+    assert "1.30" in over.block_reason or "double-count" in over.block_reason.lower()
+
+    ok = compute_pediatric_dose(fm={"renal_gfr": 1.0}, **common)
+    assert not ok.blocked and ok.recommended_dose_mg_per_kg_per_day is not None
+    print("  empty/over-sum fm HARD STOPPED; valid fm doses  OK")
+
+
+def test_ssrf_guard():
+    """web_fetch must refuse loopback/private targets before connecting."""
+    from retrieval.retrieval_tools import web_fetch
+    for url in ("http://127.0.0.1/", "http://localhost/foo", "http://169.254.169.254/latest"):
+        r = web_fetch(url)
+        assert r.get("text") == ""
+        assert "SSRF" in (r.get("error") or ""), (url, r)
+    print("  web_fetch SSRF guard: loopback/metadata blocked  OK")
+
+
+def test_compute_injects_renal_and_blocks_without_pk():
+    """Orchestrator compute handler injects case renal OF and refuses without retrieval."""
+    from agents.agent import _build_compute, _normalize_case, _dossier_core_pk_ok
+
+    assert not _dossier_core_pk_ok(None)
+    assert not _dossier_core_pk_ok({"cl_adult_l_h": 1.0})
+    assert _dossier_core_pk_ok({"cl_adult_l_h": 1.0, "vd_adult_l": 10.0})
+
+    case = _normalize_case({
+        "drug": "vancomycin", "age_years": 6, "weight_kg": 20,
+        "renal_impairment": True, "height_cm": 120, "serum_creatinine_mg_dl": 1.5,
+    })
+    assert case["renal_function_fraction"] < 1.0
+
+    state = {
+        "pk_ok": False, "pk_block_reason": None, "last_dossier": None,
+        "blocked_reason": None, "last_compute_renal_frac": None,
+    }
+    compute = _build_compute(case, state)
+    denied = compute({
+        "drug": "vancomycin", "weight_kg": 20, "cl_adult_l_h": 4.2, "vd_adult_l": 49,
+        "fm": {"renal_gfr": 0.9}, "age_years": 6, "adult_dose_mg_per_day": 2000,
+    })
+    assert denied.get("blocked") and denied.get("recommended_dose_mg_per_kg_per_day") is None
+
+    state["pk_ok"] = True
+    state["pk_block_reason"] = None
+    state["last_dossier"] = {
+        "cl_adult_l_h": 4.2, "vd_adult_l": 49.0, "fm": {"renal_gfr": 0.9},
+        "typical_adult_dose_mg_per_day": 2000,
+    }
+    # Model "forgets" renal_function_fraction — handler must inject case value.
+    out = compute({
+        "drug": "vancomycin", "weight_kg": 20, "cl_adult_l_h": 99, "vd_adult_l": 99,
+        "fm": {"renal_gfr": 0.9}, "age_years": 6, "adult_dose_mg_per_day": 2000,
+        # deliberate omit renal_function_fraction
+    })
+    assert not out.get("error"), out
+    assert state["last_compute_renal_frac"] == case["renal_function_fraction"]
+    # Dossier CL/Vd override model invention; renal OF applied (compare unrounded path OF)
+    ref = compute_pediatric_dose(
+        drug="vancomycin", weight_kg=20, cl_adult_l_h=4.2, vd_adult_l=49.0,
+        fm={"renal_gfr": 0.9}, age_years=6, adult_dose_mg_per_day=2000,
+        renal_function_fraction=case["renal_function_fraction"],
+    )
+    assert abs(out["cl_child_l_h"] - round(ref.cl_child_l_h, 3)) < 1e-9
+    assert out["pathways"][0]["organ_function_modifier"] == case["renal_function_fraction"]
+    # Without renal reduction CL would be ~2.5× higher
+    ref_full = compute_pediatric_dose(
+        drug="vancomycin", weight_kg=20, cl_adult_l_h=4.2, vd_adult_l=49.0,
+        fm={"renal_gfr": 0.9}, age_years=6, adult_dose_mg_per_day=2000,
+        renal_function_fraction=1.0,
+    )
+    assert ref.cl_child_l_h < ref_full.cl_child_l_h * 0.5
+    print("  compute: PK abstain + renal OF inject + dossier PK override  OK")
+
+
+def test_allergy_normalize_hint():
+    from agents.agent import _normalize_case
+    c = _normalize_case({
+        "drug": "Vancomycin", "age_years": 6, "weight_kg": 20,
+        "allergies": ["penicillin", "vancomycin"],
+    })
+    assert c.get("allergy_name_overlap_hint")
+    assert any("vancomycin" in h.lower() for h in c["allergy_name_overlap_hint"])
+    print("  allergy name-overlap hint set for same-drug allergy  OK")
 
 
 def test_mechanism_scorer():
@@ -304,6 +421,10 @@ if __name__ == "__main__":
     test_time_mic_flag()
     test_safety_bounds_fire()
     test_route_not_viable_hard_stop()
+    test_empty_and_over_sum_fm_hard_stop()
+    test_ssrf_guard()
+    test_compute_injects_renal_and_blocks_without_pk()
+    test_allergy_normalize_hint()
     test_mechanism_scorer()
     test_child_pugh()
     concordance_check()

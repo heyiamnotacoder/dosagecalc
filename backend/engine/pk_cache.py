@@ -71,11 +71,18 @@ class PkCache:
             }
 
     def set(self, drug: str, indication: str | None, dossier: dict, source_mode: str = "live") -> bool:
-        """Store live dossier only. Returns False if rejected."""
+        """Store live dossier only. Returns False if rejected.
+
+        Requires both core PK values and at least one citation so a hallucinated
+        (uncited) dossier cannot poison the shared dyno cache.
+        """
         if source_mode != "live" or not dossier:
             return False
-        # reject empty/null core PK
-        if dossier.get("cl_adult_l_h") is None and dossier.get("vd_adult_l") is None:
+        # require both core PK numbers — partial dossiers must not be reused
+        if dossier.get("cl_adult_l_h") is None or dossier.get("vd_adult_l") is None:
+            return False
+        citations = dossier.get("citations")
+        if not isinstance(citations, list) or len(citations) == 0:
             return False
         key = self.make_key(drug, indication)
         try:

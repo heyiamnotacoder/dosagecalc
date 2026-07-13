@@ -71,7 +71,7 @@ TOOLS = [
     {
         "name": "retrieve_drug_data",
         "description": "LIVE retrieval subagent (PubMed + openFDA). ONLY source of drug PK. "
-                       "Returns source_mode live|unavailable.",
+                       "Returns source_mode live|cache|unavailable.",
         "input_schema": {
             "type": "object",
             "properties": {"drug": {"type": "string"}, "indication": {"type": "string"}},
@@ -201,12 +201,15 @@ TOOLS = [
 ]
 
 
-def _compute(args: dict) -> dict:
-    try:
-        r = compute_pediatric_dose(**args)
-        return result_to_dict(r)
-    except Exception as e:
-        return {"error": str(e)}
+# Keyword args accepted by compute_pediatric_dose (filter model junk).
+_COMPUTE_KEYS = frozenset({
+    "drug", "weight_kg", "cl_adult_l_h", "vd_adult_l", "fm", "target_metric",
+    "age_years", "pma_weeks", "gestational_age_weeks", "postnatal_age_weeks",
+    "adult_dose_mg_per_day", "adult_interval_h", "renal_function_fraction",
+    "hepatic_function_fraction", "toxic_dose_mg_per_kg_per_day",
+    "effective_dose_mg_per_kg_per_day", "route", "oral_bioavailability",
+    "routes_allowed", "assume_term",
+})
 
 
 def _assess_edge_cases(args: dict) -> dict:
@@ -221,11 +224,110 @@ def _assess_edge_cases(args: dict) -> dict:
         return {"flags": [], "adjustments": {}, "notes": [], "error": str(e)}
 
 
-LOCAL_TOOLS = {
-    "compute_pediatric_dose": _compute,
-    "load_skill": lambda a: load_skill(a.get("name", "")),
-    "assess_edge_cases": _assess_edge_cases,
-}
+def _dossier_core_pk_ok(dossier: dict | None) -> bool:
+    """True when both adult CL and Vd are present (usable for the engine)."""
+    if not dossier:
+        return False
+    return dossier.get("cl_adult_l_h") is not None and dossier.get("vd_adult_l") is not None
+
+
+def _force_safety_block(rec: dict, reason: str, *, flag_token: str = "SAFETY STOP") -> None:
+    """Null doses, grade D, blocked — deterministic submit override."""
+    rec["final_dose_mg_per_kg_per_day"] = None
+    rec["final_dose_mg_per_day"] = None
+    rec["grade"] = "D"
+    rec["blocked"] = True
+    rec["block_reason"] = reason
+    flags = list(rec.get("flags") or [])
+    if not any(flag_token in str(f).upper() or reason in str(f) for f in flags):
+        flags.insert(0, reason if reason.upper().startswith("SAFETY") else f"SAFETY STOP: {reason}")
+    rec["flags"] = flags
+
+
+def _build_compute(case: dict, state: dict):
+    """Return a compute_pediatric_dose tool handler closed over case + retrieval state.
+
+    Injects authoritative organ fractions / route / safety bounds from the case and
+    last dossier so the model cannot omit renal OF or invent PK after abstention.
+    Dossier CL/Vd/fm/F/toxic/effective always win when present (not fill-if-omitted).
+    """
+    def _compute(args: dict) -> dict:
+        # Live-or-abstain: refuse compute without a successful retrieval of core PK.
+        # Recoverable — do NOT latch sticky blocked_reason (that is for real engine hard-stops).
+        if state.get("pk_block_reason") or not state.get("pk_ok"):
+            reason = state.get("pk_block_reason") or (
+                "SAFETY STOP — no cited adult PK retrieved; call retrieve_drug_data "
+                "successfully before compute (cite-or-abstain)."
+            )
+            return {
+                "error": reason,
+                "blocked": True,
+                "block_reason": reason,
+                "recommended_dose_mg_per_day": None,
+                "recommended_dose_mg_per_kg_per_day": None,
+            }
+        try:
+            # Keep explicit nulls for oral_bioavailability (unknown F must reach the engine).
+            merged: dict = {}
+            for k, v in (args or {}).items():
+                if k not in _COMPUTE_KEYS:
+                    continue
+                if v is None and k != "oral_bioavailability":
+                    continue
+                merged[k] = v
+            # Authoritative organ function from normalized case (not model defaults).
+            if case.get("renal_function_fraction") is not None:
+                merged["renal_function_fraction"] = case["renal_function_fraction"]
+            if case.get("hepatic_function_fraction") is not None:
+                merged["hepatic_function_fraction"] = case["hepatic_function_fraction"]
+            # Prefer case route when model omits it.
+            if "route" not in merged and case.get("route"):
+                merged["route"] = case["route"]
+            # Child covariates from case if model omitted them.
+            for k in ("weight_kg", "age_years", "pma_weeks", "gestational_age_weeks",
+                      "postnatal_age_weeks"):
+                if k not in merged and case.get(k) is not None:
+                    merged[k] = case[k]
+            if "drug" not in merged and case.get("drug"):
+                merged["drug"] = case["drug"]
+            dossier = state.get("last_dossier") or {}
+            # Prefer retrieved adult dose when model omits it.
+            if "adult_dose_mg_per_day" not in merged and dossier.get("typical_adult_dose_mg_per_day") is not None:
+                merged["adult_dose_mg_per_day"] = dossier["typical_adult_dose_mg_per_day"]
+            # Authoritative dossier fields — always override model invention when present.
+            if dossier.get("cl_adult_l_h") is not None:
+                merged["cl_adult_l_h"] = dossier["cl_adult_l_h"]
+            if dossier.get("vd_adult_l") is not None:
+                merged["vd_adult_l"] = dossier["vd_adult_l"]
+            if dossier.get("fm"):
+                merged["fm"] = dossier["fm"]
+            if dossier.get("target_metric"):
+                merged["target_metric"] = dossier["target_metric"]
+            for k in ("toxic_dose_mg_per_kg_per_day", "effective_dose_mg_per_kg_per_day",
+                      "oral_bioavailability"):
+                if k in dossier and dossier[k] is not None:
+                    merged[k] = dossier[k]
+            # Oral + unknown F: pass None so the engine hard-stops (do not invent F=1.0).
+            route = (merged.get("route") or case.get("route") or "iv").lower()
+            if route == "oral" and "oral_bioavailability" not in merged:
+                merged["oral_bioavailability"] = None
+
+            state["last_compute_renal_frac"] = merged.get(
+                "renal_function_fraction", case.get("renal_function_fraction", 1.0)
+            )
+            r = compute_pediatric_dose(**merged)
+            out = result_to_dict(r)
+            if out.get("blocked"):
+                state["blocked_reason"] = out.get("block_reason") or "not prescribable"
+            else:
+                # Successful non-blocked compute clears a prior engine latch only if
+                # this run is prescribable (PK-not-ready never latched blocked_reason).
+                state["blocked_reason"] = None
+            return out
+        except Exception as e:
+            return {"error": str(e)}
+
+    return _compute
 
 
 def _normalize_case(case: dict) -> dict:
@@ -269,7 +371,7 @@ def _normalize_case(case: dict) -> dict:
             c[key] = [str(x).strip() for x in raw if str(x).strip()]
         else:
             c[key] = []
-    # Light deterministic allergy↔drug name overlap hint (agent still decides hard-stop)
+    # Same-drug allergy token overlap → deterministic submit hard-stop (not model-optional).
     try:
         from engine.child_pugh import allergy_tokens_overlap
         hits = allergy_tokens_overlap(c.get("allergies"), c.get("drug") or "")
@@ -286,20 +388,21 @@ def _normalize_case(case: dict) -> dict:
     return c
 
 
-def _organ_function_flags(case: dict) -> list[str]:
+def _organ_function_flags(case: dict, applied_renal_frac: float | None = None) -> list[str]:
     """Deterministic renal/hepatic-impairment flags built from the normalized case.
 
     Authoritative and model-independent: run_case injects these at submit time so the
     graded output always reflects what the engine actually did with organ function.
+    `applied_renal_frac` is the fraction actually passed into the last compute (if any).
     """
     flags: list[str] = []
     if case.get("renal_impairment"):
         egfr = case.get("estimated_gfr_ml_min_1_73m2")
-        frac = case.get("renal_function_fraction")
-        if egfr is not None:
+        frac = applied_renal_frac if applied_renal_frac is not None else case.get("renal_function_fraction")
+        if egfr is not None and frac is not None:
             flags.append(
                 f"RENAL impairment: estimated GFR ~{egfr:.0f} mL/min/1.73m^2 (bedside Schwartz "
-                f"from serum creatinine + height) → renal clearance scaled to ~{frac:.2f}x normal. "
+                f"from serum creatinine + height) → renal clearance scaled to ~{float(frac):.2f}x normal. "
                 "NOTE: Schwartz is the pediatric standard; Cockcroft-Gault (adult) is not used. "
                 "Reassess interval and TDM for renally-cleared / narrow-TI drugs."
             )
@@ -330,13 +433,15 @@ def _organ_function_flags(case: dict) -> list[str]:
     return flags
 
 
-def _apply_organ_function_flags(rec: dict, case: dict) -> None:
+def _apply_organ_function_flags(
+    rec: dict, case: dict, applied_renal_frac: float | None = None,
+) -> None:
     """Replace any renal/hepatic-impairment flags with the authoritative deterministic ones."""
     kept = [
         f for f in (rec.get("flags") or [])
         if not str(f).startswith(("RENAL impairment", "HEPATIC impairment"))
     ]
-    kept.extend(_organ_function_flags(case))
+    kept.extend(_organ_function_flags(case, applied_renal_frac=applied_renal_frac))
     rec["flags"] = kept
 
 
@@ -352,7 +457,19 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
     trace: list[str] = []
     in_tok = out_tok = cache_read = cache_write = 0
     retr_in = retr_out = 0
-    blocked_reason: str | None = None   # deterministic hard-stop latched from the engine
+    # Deterministic safety state shared with tool handlers (not model-trust).
+    state: dict = {
+        "blocked_reason": None,   # engine / route / toxic hard-stop
+        "pk_ok": False,           # True after live/cache dossier with CL+Vd
+        "pk_block_reason": None,  # sticky when retrieval unavailable / null PK
+        "last_dossier": None,
+        "last_compute_renal_frac": case.get("renal_function_fraction"),
+    }
+    local_tools = {
+        "compute_pediatric_dose": _build_compute(case, state),
+        "load_skill": lambda a: load_skill(a.get("name", "")),
+        "assess_edge_cases": _assess_edge_cases,
+    }
 
     for _ in range(max_turns):
         resp = client.messages.create(
@@ -391,20 +508,28 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
         tool_results = []
         for tu in tool_uses:
             if tu.name == "submit_recommendation":
-                rec = tu.input
-                # Deterministic hard stop: if the engine blocked the case, force a
-                # non-prescription regardless of what the model proposed.
-                if blocked_reason:
-                    rec["final_dose_mg_per_kg_per_day"] = None
-                    rec["final_dose_mg_per_day"] = None
-                    rec["grade"] = "D"
-                    rec["blocked"] = True
-                    rec["block_reason"] = blocked_reason
-                    flags = list(rec.get("flags") or [])
-                    if not any("SAFETY STOP" in str(f) for f in flags):
-                        flags.insert(0, f"SAFETY STOP: {blocked_reason}")
-                    rec["flags"] = flags
-                # Model-reported contraindication hard-stop: force null dose + grade D.
+                rec = dict(tu.input) if tu.input else {}
+                # 1) PK cite-or-abstain: never allow a dose without successful retrieval.
+                if state.get("pk_block_reason") or not state.get("pk_ok"):
+                    reason = state.get("pk_block_reason") or (
+                        "SAFETY STOP — adult PK was not retrieved (or was null); "
+                        "abstain, do not invent numbers (grade D)."
+                    )
+                    _force_safety_block(rec, reason)
+                # 2) Engine hard stop (route / toxic / empty fm / …).
+                if state.get("blocked_reason"):
+                    _force_safety_block(rec, state["blocked_reason"])
+                # 3) Deterministic same-drug allergy hard-stop (token overlap).
+                allergy_hits = case.get("allergy_name_overlap_hint") or []
+                if allergy_hits:
+                    hits_txt = ", ".join(str(h) for h in allergy_hits)
+                    reason = (
+                        f"SAFETY STOP — CONTRAINDICATED: allergy matches drug name "
+                        f"({hits_txt})."
+                    )
+                    _force_safety_block(rec, reason, flag_token="CONTRAINDICATED")
+                    rec["contraindication_matched"] = rec.get("contraindication_matched") or hits_txt
+                # 4) Model-reported contraindication hard-stop.
                 matched = rec.get("contraindication_matched")
                 matched_s = str(matched).strip() if matched is not None else ""
                 br = str(rec.get("block_reason") or "")
@@ -415,21 +540,15 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                     )
                     if not reason.upper().startswith("SAFETY"):
                         reason = f"SAFETY STOP — CONTRAINDICATED: {reason}"
-                    rec["final_dose_mg_per_kg_per_day"] = None
-                    rec["final_dose_mg_per_day"] = None
-                    rec["grade"] = "D"
-                    rec["blocked"] = True
-                    rec["block_reason"] = reason
-                    flags = list(rec.get("flags") or [])
-                    if not any("CONTRAINDICATED" in str(f).upper() for f in flags):
-                        flags.insert(0, reason)
-                    rec["flags"] = flags
+                    _force_safety_block(rec, reason, flag_token="CONTRAINDICATED")
                 # Ensure avoid-list is always a list (even if model omitted)
                 avoid = rec.get("contraindications_avoid")
                 if not isinstance(avoid, list):
                     rec["contraindications_avoid"] = []
                 # Authoritative renal/hepatic-impairment flags (model-independent).
-                _apply_organ_function_flags(rec, case)
+                _apply_organ_function_flags(
+                    rec, case, applied_renal_frac=state.get("last_compute_renal_frac"),
+                )
                 return {
                     "recommendation": rec,
                     "trace": trace,
@@ -447,22 +566,41 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                 rout = retrieval.fetch(tu.input["drug"], tu.input.get("indication"))
                 retr_in += rout["usage"].get("input_tokens", 0)
                 retr_out += rout["usage"].get("output_tokens", 0)
+                dossier = rout.get("dossier") or {}
+                mode = rout.get("source_mode") or "unavailable"
+                # Latch retrieval outcome — product path never invents PK after fail/null.
+                if mode == "unavailable" or not _dossier_core_pk_ok(dossier):
+                    state["pk_ok"] = False
+                    state["last_dossier"] = dossier
+                    conf = (dossier.get("confidence") or "").strip()
+                    state["pk_block_reason"] = (
+                        "SAFETY STOP — PK retrieval unavailable or core adult PK (CL/Vd) "
+                        f"null (source_mode={mode}"
+                        + (f"; {conf}" if conf else "")
+                        + "). Abstain — do not invent numbers (grade D)."
+                    )
+                    if on_step:
+                        on_step(f"→ retrieval {mode} — PK abstain latched")
+                else:
+                    state["pk_ok"] = True
+                    state["pk_block_reason"] = None
+                    state["last_dossier"] = dossier
                 payload = {
-                    "source_mode": rout["source_mode"],
-                    "dossier": rout["dossier"],
+                    "source_mode": mode,
+                    "dossier": dossier,
                 }
                 tool_results.append({
                     "type": "tool_result", "tool_use_id": tu.id,
                     "content": json.dumps(payload),
                 })
-            elif tu.name in LOCAL_TOOLS:
+            elif tu.name in local_tools:
                 if on_step:
                     on_step(f"→ {tu.name} …")
-                out = LOCAL_TOOLS[tu.name](tu.input)
+                out = local_tools[tu.name](tu.input)
                 if tu.name == "compute_pediatric_dose" and isinstance(out, dict) and out.get("blocked"):
-                    blocked_reason = out.get("block_reason") or "not prescribable"
+                    state["blocked_reason"] = out.get("block_reason") or state.get("blocked_reason") or "not prescribable"
                     if on_step:
-                        on_step(f"→ SAFETY STOP — {blocked_reason}")
+                        on_step(f"→ SAFETY STOP — {state['blocked_reason']}")
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": tu.id,

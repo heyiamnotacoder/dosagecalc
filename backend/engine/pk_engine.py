@@ -181,7 +181,8 @@ def compute_pediatric_dose(
     toxic_dose_mg_per_kg_per_day: Optional[float] = None,
     effective_dose_mg_per_kg_per_day: Optional[float] = None,
     route: str = "iv",                      # child administration route ("iv" | "oral")
-    oral_bioavailability: float = 1.0,      # pediatric F; applied only when route == "oral"
+    # None = unknown F (oral hard-stops as data gap). Do not default to 1.0 — that invents absorption.
+    oral_bioavailability: Optional[float] = None,
     routes_allowed: Optional[list[str]] = None,  # explicit viable routes; None = infer from F
     assume_term: bool = True,
 ) -> DoseResult:
@@ -201,7 +202,37 @@ def compute_pediatric_dose(
         age_years, pma_weeks, gestational_age_weeks, postnatal_age_weeks, assume_term
     )
 
-    fm_total = sum(fm.values())
+    fm = fm or {}
+    fm_total = sum(fm.values()) if fm else 0.0
+    # Structurally invalid attribution → hard stop (no invented maturation, no double-count).
+    # Empty fm would otherwise dose 100% unattributed mature allometry (over-dose risk in young).
+    # Over-sum (>1.05) double-counts pathway clearance. Under-sum still allowed with flag below.
+    if not fm or fm_total <= 0:
+        blocked = DoseResult(
+            pma_weeks=pma, weight_kg=weight_kg, cl_child_l_h=0.0, vd_child_l=0.0,
+            half_life_h=float("inf"), cl_fraction_of_adult=0.0, target_metric=target_metric,
+            warnings=list(warnings), blocked=True,
+            block_reason=(
+                "SAFETY STOP — empty or zero fm attribution; refusing to dose without a "
+                "maturing pathway map (cite-or-abstain)."
+            ),
+        )
+        blocked.dose_basis = blocked.block_reason
+        blocked.warnings.append(blocked.block_reason)
+        return blocked
+    if fm_total > 1.05:
+        blocked = DoseResult(
+            pma_weeks=pma, weight_kg=weight_kg, cl_child_l_h=0.0, vd_child_l=0.0,
+            half_life_h=float("inf"), cl_fraction_of_adult=0.0, target_metric=target_metric,
+            warnings=list(warnings), blocked=True,
+            block_reason=(
+                f"SAFETY STOP — fm fractions sum to {fm_total:.2f} (>1.05); refusing to "
+                "double-count clearance pathways."
+            ),
+        )
+        blocked.dose_basis = blocked.block_reason
+        blocked.warnings.append(blocked.block_reason)
+        return blocked
     if not (0.5 <= fm_total <= 1.001):
         warnings.append(
             f"fm split sums to {fm_total:.2f} (expected ~1.0) — pathway attribution is "
@@ -263,20 +294,33 @@ def compute_pediatric_dose(
 
     # ---- route viability HARD STOP ----------------------------------------
     # A non-prescribable route yields NO dose (not a soft flag). Non-viable when an explicit
-    # allow-list excludes the route, or (heuristic) an oral route is requested for a drug that
-    # is not systemically absorbed orally (F <= 0). Child physiology above is still returned.
+    # allow-list excludes the route, or oral with known F<=0 (not systemically absorbed).
+    # Unknown F (None) is a data gap — block without claiming F=0.
     _route = (route or "iv").lower()
-    _non_viable = False
-    if routes_allowed:
-        _non_viable = _route not in {r.lower() for r in routes_allowed}
-    elif _route == "oral" and (oral_bioavailability is None or oral_bioavailability <= 0):
-        _non_viable = True
-    if _non_viable:
+    if routes_allowed and _route not in {r.lower() for r in routes_allowed}:
+        result.blocked = True
+        result.block_reason = (
+            f"SAFETY STOP — ROUTE NOT VIABLE: {_route} is not among allowed routes "
+            f"{sorted({r.lower() for r in routes_allowed})} for {drug}."
+        )
+        result.dose_basis = result.block_reason
+        result.warnings.append(result.block_reason)
+        return result
+    if _route == "oral" and oral_bioavailability is None:
+        result.blocked = True
+        result.block_reason = (
+            f"SAFETY STOP — oral bioavailability unknown for {drug} (data gap); cannot "
+            "convert a systemic-matched dose to an administered oral dose without inventing F."
+        )
+        result.dose_basis = result.block_reason
+        result.warnings.append(result.block_reason)
+        return result
+    if _route == "oral" and oral_bioavailability <= 0:
         result.blocked = True
         result.block_reason = (
             f"SAFETY STOP — ROUTE NOT VIABLE: {drug} is not systemically absorbed via the "
-            f"{_route} route (F=0); a systemic-exposure-matched dose cannot be delivered this "
-            f"way. IV/IM required."
+            f"oral route (F={oral_bioavailability}); a systemic-exposure-matched dose cannot "
+            "be delivered this way. IV/IM required."
         )
         result.dose_basis = result.block_reason
         result.warnings.append(result.block_reason)

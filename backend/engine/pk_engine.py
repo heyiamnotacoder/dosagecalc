@@ -89,8 +89,19 @@ def maturation_factor(pma_weeks: float, tm50_weeks: float, hill: float) -> float
 
 
 def allometric_scale(weight_kg: float, exponent: float) -> float:
-    """(WT / 70) ** exponent."""
+    """(WT / 70) ** exponent. weight_kg must be > 0 (validated by callers)."""
     return (weight_kg / REFERENCE_WEIGHT_KG) ** exponent
+
+
+def _finite_or_none(x: float) -> Optional[float]:
+    """JSON-safe: Infinity/NaN are not valid JSON and break strict parsers / browsers."""
+    if x is None:
+        return None
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return v if math.isfinite(v) else None
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +208,42 @@ def compute_pediatric_dose(
     F to give the administered oral dose (F is treated as the adult value — a data-gap flag
     is raised because pediatric absorption can differ).
     """
+    # ---- hard input validation (refuse values that crash math or invent nonsense) ----
+    try:
+        weight_kg = float(weight_kg)
+        cl_adult_l_h = float(cl_adult_l_h)
+        vd_adult_l = float(vd_adult_l)
+    except (TypeError, ValueError) as e:
+        raise ValueError("weight_kg, cl_adult_l_h, and vd_adult_l must be numbers") from e
+    if weight_kg <= 0:
+        raise ValueError(f"weight_kg must be > 0 (got {weight_kg})")
+    if cl_adult_l_h <= 0:
+        raise ValueError(f"cl_adult_l_h must be > 0 (got {cl_adult_l_h})")
+    if vd_adult_l <= 0:
+        raise ValueError(f"vd_adult_l must be > 0 (got {vd_adult_l})")
+    try:
+        renal_function_fraction = float(renal_function_fraction)
+        hepatic_function_fraction = float(hepatic_function_fraction)
+    except (TypeError, ValueError) as e:
+        raise ValueError("renal/hepatic_function_fraction must be numbers") from e
+    # OF is a fraction of normal function — never amplify above 1.0, never go non-positive
+    # (zero OF would yield CL=0 → inf half-life / non-JSON Infinity in tool results).
+    if not (0.0 < renal_function_fraction <= 1.0):
+        raise ValueError(
+            f"renal_function_fraction must be in (0, 1] (got {renal_function_fraction})"
+        )
+    if not (0.0 < hepatic_function_fraction <= 1.0):
+        raise ValueError(
+            f"hepatic_function_fraction must be in (0, 1] (got {hepatic_function_fraction})"
+        )
+    if fm is None or not isinstance(fm, dict):
+        raise ValueError("fm must be a dict of pathway -> fraction")
+
     pma, warnings = _resolve_pma_weeks(
         age_years, pma_weeks, gestational_age_weeks, postnatal_age_weeks, assume_term
     )
 
-    fm_total = sum(fm.values())
+    fm_total = sum(fm.values()) if fm else 0.0
     if not (0.5 <= fm_total <= 1.001):
         warnings.append(
             f"fm split sums to {fm_total:.2f} (expected ~1.0) — pathway attribution is "
@@ -247,7 +289,7 @@ def compute_pediatric_dose(
 
     vd_child = vd_adult_l * allometric_scale(weight_kg, VD_EXPONENT)
     half_life = math.log(2) * vd_child / cl_child if cl_child > 0 else float("inf")
-    cl_fraction_adult = cl_child / cl_adult_l_h if cl_adult_l_h else float("nan")
+    cl_fraction_adult = cl_child / cl_adult_l_h  # cl_adult validated > 0 above
 
     result = DoseResult(
         pma_weeks=pma,
@@ -265,10 +307,11 @@ def compute_pediatric_dose(
     # A non-prescribable route yields NO dose (not a soft flag). Non-viable when an explicit
     # allow-list excludes the route, or (heuristic) an oral route is requested for a drug that
     # is not systemically absorbed orally (F <= 0). Child physiology above is still returned.
-    _route = (route or "iv").lower()
+    # Always use _route (never bare route.lower()) so route=None does not AttributeError.
+    _route = (route or "iv").strip().lower() or "iv"
     _non_viable = False
     if routes_allowed:
-        _non_viable = _route not in {r.lower() for r in routes_allowed}
+        _non_viable = _route not in {str(r).lower() for r in routes_allowed}
     elif _route == "oral" and (oral_bioavailability is None or oral_bioavailability <= 0):
         _non_viable = True
     if _non_viable:
@@ -286,7 +329,7 @@ def compute_pediatric_dose(
     # css / auc / time_mic all match the ADULT SYSTEMIC exposure by scaling the daily
     # dose-rate on the clearance ratio. time_mic (β-lactams) is solved the same way but
     # is only a PROXY — see the flag below.
-    metric = target_metric.lower()
+    metric = (target_metric or "css").lower()
     if metric in ("css", "auc", "time_mic"):
         # exposure(AUC/Css) = dose_rate / CL  ->  match adult by scaling on clearance ratio
         if adult_dose_mg_per_day is not None:
@@ -337,7 +380,7 @@ def compute_pediatric_dose(
     # to reproduce adult exposure). For an oral route only a fraction F is absorbed, so
     # the ADMINISTERED oral dose = systemic dose / F. Applied before the safety check so
     # the toxic/effective bounds are compared against the dose actually given.
-    if route.lower() == "oral" and result.recommended_dose_mg_per_day is not None:
+    if _route == "oral" and result.recommended_dose_mg_per_day is not None:
         if not (0.0 < oral_bioavailability <= 1.0):
             result.warnings.append(
                 f"Oral route requested but F={oral_bioavailability} is out of range (0,1] — "
@@ -359,7 +402,7 @@ def compute_pediatric_dose(
             )
 
     # interval suggestion: scale adult interval by half-life prolongation
-    if adult_interval_h is not None and cl_child > 0:
+    if adult_interval_h is not None and cl_child > 0 and cl_adult_l_h > 0:
         adult_hl = math.log(2) * vd_adult_l / cl_adult_l_h
         ratio = half_life / adult_hl if adult_hl else 1.0
         result.suggested_interval_h = adult_interval_h * ratio
@@ -393,14 +436,20 @@ def compute_pediatric_dose(
 
 
 def result_to_dict(r: DoseResult) -> dict:
-    """Flatten a DoseResult for JSON / tool-return."""
+    """Flatten a DoseResult for JSON / tool-return.
+
+    Non-finite floats (inf half-life, nan) become null — standard JSON has no Infinity,
+    and browser JSON.parse / strict clients reject Python's `Infinity` token.
+    """
+    hl = _finite_or_none(r.half_life_h)
+    cl_frac = _finite_or_none(r.cl_fraction_of_adult)
     return {
         "pma_weeks": round(r.pma_weeks, 1),
         "weight_kg": r.weight_kg,
         "cl_child_l_h": round(r.cl_child_l_h, 3),
         "vd_child_l": round(r.vd_child_l, 2),
-        "half_life_h": round(r.half_life_h, 2),
-        "cl_fraction_of_adult": round(r.cl_fraction_of_adult, 3),
+        "half_life_h": round(hl, 2) if hl is not None else None,
+        "cl_fraction_of_adult": round(cl_frac, 3) if cl_frac is not None else None,
         "target_metric": r.target_metric,
         "recommended_dose_mg_per_day": (
             round(r.recommended_dose_mg_per_day, 2)

@@ -463,8 +463,12 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                     # Exactly one mode-specific step, so the console tells the truth.
                     if mode == "demo":
                         on_step(f"→ demo pack hit for {drug_name} — skipped live retrieval")
+                    elif mode == "cache":
+                        on_step(f"→ pk_cache hit for {drug_name} — skipped live retrieval")
+                    elif mode == "unavailable":
+                        on_step(f"→ retrieval unavailable for {drug_name} — no PK dossier")
                     else:
-                        on_step(f"→ live retrieval for {drug_name} — PubMed/openFDA …")
+                        on_step(f"→ live retrieval complete for {drug_name} (PubMed/openFDA)")
                 payload = {
                     "source_mode": mode,
                     "dossier": rout["dossier"],

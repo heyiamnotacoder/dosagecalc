@@ -198,6 +198,56 @@ def test_route_not_viable_hard_stop():
     print("  route viability: oral F=0 HARD STOPPED, IV unaffected  OK")
 
 
+def test_engine_rejects_invalid_inputs():
+    """Non-positive weight/CL/Vd, route=None, and OF=0 must not crash with ZeroDivision/AttributeError."""
+    from engine.pk_engine import result_to_dict
+    base = dict(
+        drug="probe", weight_kg=10, cl_adult_l_h=10, vd_adult_l=50,
+        fm={"renal_gfr": 1.0}, age_years=6, adult_dose_mg_per_day=100,
+    )
+    for bad, kwargs in (
+        ("weight_kg=0", {"weight_kg": 0}),
+        ("weight_kg=-1", {"weight_kg": -1}),
+        ("cl_adult_l_h=0", {"cl_adult_l_h": 0}),
+        ("vd_adult_l=0", {"vd_adult_l": 0}),
+        ("hepatic OF=0", {"hepatic_function_fraction": 0.0, "fm": {"cyp3a4": 1.0}}),
+        ("renal OF=0", {"renal_function_fraction": 0.0}),
+    ):
+        try:
+            compute_pediatric_dose(**{**base, **kwargs})
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"expected ValueError for {bad}")
+
+    # route=None must default to IV and still solve (was AttributeError on route.lower())
+    r = compute_pediatric_dose(**{**base, "route": None})
+    assert not r.blocked and r.recommended_dose_mg_per_day is not None
+
+    # result_to_dict must never emit non-JSON Infinity/NaN
+    r2 = compute_pediatric_dose(**base)
+    # force a pathological half_life on the object to prove the serializer
+    r2.half_life_h = float("inf")
+    r2.cl_fraction_of_adult = float("nan")
+    d = result_to_dict(r2)
+    assert d["half_life_h"] is None and d["cl_fraction_of_adult"] is None
+    payload = json.dumps(d)
+    assert "Infinity" not in payload and "NaN" not in payload
+    print("  engine rejects invalid inputs; route=None safe; JSON-safe floats  OK")
+
+
+def test_edge_cases_bad_fraction_coercion():
+    """Garbage organ-function strings must not crash assess_edge_cases."""
+    from engine.edge_cases import assess_edge_cases
+    r = assess_edge_cases(
+        {"drug": "vancomycin", "age_years": 6, "weight_kg": 20,
+         "renal_function_fraction": "n/a", "hepatic_function_fraction": "bad"},
+        {},
+    )
+    assert "flags" in r and not any("RENAL" in f for f in r["flags"])
+    print("  edge_cases: non-numeric OF strings ignored  OK")
+
+
 def test_mechanism_scorer():
     """The mechanism scorer must reward a perfect answer and catch a targeted miss (no key)."""
     from engine.mechanism_score import load_truth, score_mechanism
@@ -304,6 +354,8 @@ if __name__ == "__main__":
     test_time_mic_flag()
     test_safety_bounds_fire()
     test_route_not_viable_hard_stop()
+    test_engine_rejects_invalid_inputs()
+    test_edge_cases_bad_fraction_coercion()
     test_mechanism_scorer()
     test_child_pugh()
     concordance_check()

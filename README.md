@@ -1,5 +1,8 @@
+![PaedScale](docs/banner.png)
+
 # PaedScale
 
+[![Live demo](https://img.shields.io/badge/live-paedscale.by--dhruvik.in-0E7A6B?logo=safari&logoColor=white)](https://paedscale.by-dhruvik.in)
 ![Claude Life Sciences Hackathon 2026](https://img.shields.io/badge/Claude%20Life%20Sciences-Hackathon%202026-0E7A6B)
 ![License: MIT](https://img.shields.io/badge/license-MIT-1a6ee0)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)
@@ -7,6 +10,8 @@
 ![Decision support](https://img.shields.io/badge/status-decision%20support-B9760A)
 
 ### A pediatric dose, extrapolated from adult pharmacokinetics — with a cited, graded, auditable rationale.
+
+> 🔗 **Live at [paedscale.by-dhruvik.in](https://paedscale.by-dhruvik.in)** — built at the **2026 Claude: Life Sciences Hackathon**.
 
 PaedScale derives a defensible **starting** dose for a child from published adult PK, using
 **allometry × organ maturation** (Anderson–Holford), and returns a graded A→D recommendation with the
@@ -145,6 +150,8 @@ backend/                     run all commands from here (backend/ is the package
 serves a TTL-bounded cache hit, or **abstains** (grade D). `eval_data/` is harness-only.
 
 ## Run
+
+**Hosted:** the live app is at **[paedscale.by-dhruvik.in](https://paedscale.by-dhruvik.in)**. To run locally:
 
 ```bash
 cd backend                         # backend/ is the package root — run everything from here

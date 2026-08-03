@@ -127,8 +127,19 @@ def assess_edge_cases(
 
     indication = (case.get("indication") or "").lower()
     illness = any(h in indication for h in _CRITICAL_ILLNESS_HINTS)
-    renal = bool(case.get("renal_impairment")) or float(case.get("renal_function_fraction") or 1) < 0.99
-    hepatic = bool(case.get("hepatic_impairment")) or float(case.get("hepatic_function_fraction") or 1) < 0.99
+
+    def _frac_impaired(key: str) -> bool:
+        """True when organ-function fraction is present and < 0.99. Bad values → not impaired."""
+        raw = case.get(key)
+        if raw is None or raw == "":
+            return False
+        try:
+            return float(raw) < 0.99
+        except (TypeError, ValueError):
+            return False
+
+    renal = bool(case.get("renal_impairment")) or _frac_impaired("renal_function_fraction")
+    hepatic = bool(case.get("hepatic_impairment")) or _frac_impaired("hepatic_function_fraction")
 
     if pb_f is not None and pb_f >= 90 and (neonate or illness or hepatic):
         flags.append(

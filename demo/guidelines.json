@@ -1,0 +1,226 @@
+{
+  "_comment": "DEMO BRANCH ONLY. One pediatric guideline midpoint (mg/kg/day) per demo drug/indication, returned alongside the demo PK dossier so the agent can concordance-check without web_search. Never merge demo \u2192 master.",
+  "_drugs": [
+    "vancomycin",
+    "gentamicin",
+    "amikacin",
+    "ampicillin",
+    "meropenem",
+    "cefotaxime",
+    "acyclovir",
+    "levetiracetam",
+    "fluconazole",
+    "midazolam",
+    "fentanyl",
+    "clindamycin",
+    "morphine",
+    "caffeine",
+    "theophylline",
+    "phenytoin",
+    "ibuprofen",
+    "phenobarbital",
+    "metronidazole",
+    "ondansetron"
+  ],
+  "drugs": {
+    "vancomycin": {
+      "route": "iv",
+      "indication": "serious gram-positive infection",
+      "pediatric_mg_per_kg_per_day": 45,
+      "source": "IDSA/ASHP / NNF",
+      "tdm_required": true
+    },
+    "gentamicin": {
+      "route": "iv",
+      "indication": "gram-negative infection",
+      "pediatric_mg_per_kg_per_day": 5.5,
+      "source": "BNFc aminoglycoside; extend interval neonate",
+      "tdm_required": true
+    },
+    "amikacin": {
+      "route": "iv",
+      "indication": "resistant gram-negative infection",
+      "pediatric_mg_per_kg_per_day": 15,
+      "source": "BNFc / NNF",
+      "tdm_required": true
+    },
+    "ampicillin": {
+      "route": "iv",
+      "indication": "neonatal sepsis / listeria",
+      "pediatric_mg_per_kg_per_day": 120,
+      "source": "BNFc \u03b2-lactam / NNF",
+      "tdm_required": false,
+      "indications": {
+        "meningitis": {
+          "match": [
+            "meningitis",
+            "gbs meningitis",
+            "cns"
+          ],
+          "indication": "GBS / listeria meningitis (high-dose)",
+          "pediatric_mg_per_kg_per_day": 300,
+          "source": "BNFc / NNF meningitis high-dose"
+        }
+      }
+    },
+    "meropenem": {
+      "route": "iv",
+      "indication": "serious gram-negative infection",
+      "pediatric_mg_per_kg_per_day": 60,
+      "source": "BNFc / NeoFax-style (standard indication)",
+      "tdm_required": false,
+      "indications": {
+        "meningitis": {
+          "match": [
+            "meningitis",
+            "cns",
+            "ventriculitis"
+          ],
+          "indication": "meningitis / CNS (high-dose)",
+          "pediatric_mg_per_kg_per_day": 120,
+          "source": "BNFc / NeoFax-style; meningitis doubles the dose"
+        }
+      }
+    },
+    "cefotaxime": {
+      "route": "iv",
+      "indication": "neonatal sepsis",
+      "pediatric_mg_per_kg_per_day": 150,
+      "source": "BNFc / NNF sepsis",
+      "tdm_required": false,
+      "indications": {
+        "meningitis": {
+          "match": [
+            "meningitis",
+            "cns"
+          ],
+          "indication": "meningitis (high-dose)",
+          "pediatric_mg_per_kg_per_day": 200,
+          "source": "BNFc / NNF meningitis high-dose"
+        }
+      }
+    },
+    "acyclovir": {
+      "route": "iv",
+      "indication": "HSV / VZV (neonatal HSV)",
+      "pediatric_mg_per_kg_per_day": 30,
+      "source": "neonatal HSV high-dose; child HSV lower",
+      "tdm_required": false,
+      "indications": {
+        "encephalitis": {
+          "match": [
+            "encephalitis",
+            "hsv encephalitis",
+            "hse",
+            "cns"
+          ],
+          "indication": "HSV encephalitis (high-dose IV)",
+          "pediatric_mg_per_kg_per_day": 45,
+          "source": "HSV encephalitis 20 mg/kg q8h"
+        },
+        "varicella": {
+          "match": [
+            "varicella",
+            "vzv",
+            "chickenpox",
+            "zoster"
+          ],
+          "indication": "VZV / varicella\u2013zoster",
+          "pediatric_mg_per_kg_per_day": 30,
+          "source": "VZV lower than HSV encephalitis"
+        }
+      }
+    },
+    "levetiracetam": {
+      "route": "iv",
+      "indication": "seizures",
+      "pediatric_mg_per_kg_per_day": 40,
+      "source": "pediatric epilepsy guidance",
+      "tdm_required": false
+    },
+    "fluconazole": {
+      "route": "iv",
+      "indication": "candida / prophylaxis",
+      "pediatric_mg_per_kg_per_day": 6,
+      "source": "invasive candida neonate higher",
+      "tdm_required": false
+    },
+    "midazolam": {
+      "route": "iv",
+      "indication": "sedation",
+      "pediatric_mg_per_kg_per_day": 1.44,
+      "source": "BNFc ICU sedation",
+      "tdm_required": false
+    },
+    "fentanyl": {
+      "route": "iv",
+      "indication": "analgesia/sedation",
+      "pediatric_mg_per_kg_per_day": 0.048,
+      "source": "APA/BNFc analgesia",
+      "tdm_required": false
+    },
+    "clindamycin": {
+      "route": "iv",
+      "indication": "anaerobic / gram-positive",
+      "pediatric_mg_per_kg_per_day": 30,
+      "source": "BNFc",
+      "tdm_required": false
+    },
+    "morphine": {
+      "route": "iv",
+      "indication": "analgesia",
+      "pediatric_mg_per_kg_per_day": 0.48,
+      "source": "APA/BNFc; M6G caution",
+      "tdm_required": false
+    },
+    "caffeine": {
+      "route": "iv",
+      "indication": "apnea of prematurity (caffeine citrate)",
+      "pediatric_mg_per_kg_per_day": 5,
+      "source": "AOP maintenance caffeine citrate ~5 mg/kg/day base",
+      "tdm_required": false
+    },
+    "theophylline": {
+      "route": "iv",
+      "indication": "apnea / bronchospasm (historical)",
+      "pediatric_mg_per_kg_per_day": 12,
+      "source": "historical NTI; TDM",
+      "tdm_required": true
+    },
+    "phenytoin": {
+      "route": "iv",
+      "indication": "seizures",
+      "pediatric_mg_per_kg_per_day": 8,
+      "source": "neonatal seizures load separate; maint approx",
+      "tdm_required": true
+    },
+    "ibuprofen": {
+      "route": "iv",
+      "indication": "PDA closure / analgesia",
+      "pediatric_mg_per_kg_per_day": 20,
+      "source": "PDA course differs; analgesia mg/kg",
+      "tdm_required": false
+    },
+    "phenobarbital": {
+      "route": "iv",
+      "indication": "neonatal seizures",
+      "pediatric_mg_per_kg_per_day": 5,
+      "source": "neonatal seizure maintenance ~3-5 mg/kg/day",
+      "tdm_required": true
+    },
+    "metronidazole": {
+      "route": "iv",
+      "indication": "anaerobic / NEC-related",
+      "pediatric_mg_per_kg_per_day": 30,
+      "source": "BNFc / NNF",
+      "tdm_required": false
+    },
+    "ondansetron": {
+      "route": "iv",
+      "indication": "nausea / vomiting",
+      "pediatric_mg_per_kg_per_day": 0.3,
+      "source": "pediatric antiemetic ~0.15 mg/kg/dose \u00d72",
+      "tdm_required": false
+    }
+  }
+}

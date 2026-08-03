@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 load_dotenv()  # pulls ANTHROPIC_API_KEY from backend/.env
 
@@ -63,8 +63,8 @@ def _renal_fraction(case: "Case") -> float:
 class Case(BaseModel):
     drug: str
     indication: str | None = None
-    age_years: float
-    weight_kg: float
+    age_years: float = Field(..., ge=0, description="Postnatal age in years (0 = neonate day 0)")
+    weight_kg: float = Field(..., gt=0, description="Body weight in kg; must be positive")
     pma_weeks: float | None = None
     gestational_age_weeks: float | None = None
     postnatal_age_weeks: float | None = None
@@ -92,10 +92,13 @@ def index():
 
 @app.get("/health")
 def health():
+    from demo_pack import demo_enabled, list_demo_drugs
     from engine.pk_cache import CACHE as PK_CACHE
     return {"ok": True, "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "model": os.environ.get("ORCHESTRATOR_MODEL", "claude-opus-4-8"),
             "eval_drugs": sorted(_oracle_pk()),  # scored drug set (oracle), not a runtime source
+            "demo_pack": demo_enabled(),
+            "demo_drugs": list_demo_drugs(),
             "pk_cache": PK_CACHE.stats()}
 
 

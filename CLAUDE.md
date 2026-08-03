@@ -10,15 +10,14 @@ cited, auditable rationale. **Decision support, not prescribing.**
   If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
 2. read handoff saved at /private/tmp/
 3. Read Checklist.md for any task remaining and ask user if he want to continue remaining tasks. Also if the work is too long rather than saving work in plan.md use checklist.md for it.
-4. **NEVER merge branch `demo` into `master`.** Root `demo/` is offline curated PK for demos only.
-5. **NEVER merge branch `validation-eval` into `master`.** Harness oracles stay off the product path.
-6. Before making changes to any branches ask user which branch would be suited for changes.
+4. Root `validation_set/` and `result*.md` are harness-only oracles. Backend product code must
+   never import, open, or mention `validation_set`.
+5. Before making changes to any branches ask user which branch would be suited for changes.
 
-## Demo branch (this branch)
+## Demo mode
 Root `demo/pk.json` + `demo/guidelines.json` + `backend/demo_pack.py`: when a listed drug is
 requested, `retrieval.fetch` returns `source_mode="demo"` and **skips live PubMed/openFDA**.
 Disable with `PAEDSCALE_DEMO=0`. Other drugs still use the live path.
-
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that
 eliminate the drug are still maturing. Scaling an adult dose by weight over-doses the young.
@@ -112,8 +111,16 @@ Grades: **A** passes concordance vs a real guideline · **B** solid PK, no guide
 - **PMA for under-2s.** If unknown, assume term AND surface that assumption.
 - **Safety bounds.** Never present a dose above toxic / below effective without a prominent flag.
 - **NTI drugs (vancomycin, aminoglycosides) recommend TDM**; **active metabolites (M6G) flagged.**
-- **Known engine limit:** allometry×Cmax **underdoses concentration-dependent aminoglycosides** —
-  the agent must guideline-anchor and flag the exposure-target mismatch (verified on gentamicin).
+- **Known engine limits** (validation `result_eval.md` on `validation-eval`; engine kept as-is):
+  - allometry×Cmax **underdoses concentration-dependent aminoglycosides** — agent must
+    guideline-anchor + flag exposure-target mismatch + TDM (verified gentamicin/amikacin).
+  - **time_mic** daily-dose match is a **proxy** for fT>MIC — grade ceiling B; interval/infusion matters.
+  - **Michaelis–Menten** drugs (phenytoin): no linear CL invent; guideline-only or abstain.
+  - **Titration** drugs without adult mg/day (midazolam/fentanyl): no false absolute dose.
+  - Pediatric CL may exceed adult allometry for some drugs (e.g. fluconazole) — flag discordance.
+  - Obesity: flag only; do not silently rewrite weight in the engine.
+- **Validation branch:** `validation-eval` + `validation_set/` + `result_eval.md` / `results.csv`
+  are harness-only — **never merge that branch to master**; product path never imports them.
 
 ## Run
 ```bash

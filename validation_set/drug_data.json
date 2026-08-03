@@ -1,0 +1,541 @@
+{
+  "_comment": "VALIDATION HARNESS ONLY. Never import from backend product path. Live agent must not read this file.",
+  "_scenarios": [
+    "neonate_5d",
+    "child_2y_egfr85",
+    "obese_1y_14kg"
+  ],
+  "drugs": {
+    "vancomycin": {
+      "cl_adult_l_h": 4.2,
+      "vd_adult_l": 49.0,
+      "fm": {
+        "renal_gfr": 0.9
+      },
+      "target_metric": "auc",
+      "typical_adult_dose_mg_per_day": 2000,
+      "oral_bioavailability": 0.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": true,
+      "toxic_dose_mg_per_kg_per_day": 80,
+      "effective_dose_mg_per_kg_per_day": 30,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 50,
+      "indication": "serious gram-positive infection",
+      "notes": "NTI \u2192 TDM"
+    },
+    "gentamicin": {
+      "cl_adult_l_h": 5.4,
+      "vd_adult_l": 18.0,
+      "fm": {
+        "renal_gfr": 0.95
+      },
+      "target_metric": "cmax",
+      "typical_adult_dose_mg_per_day": 350,
+      "oral_bioavailability": 0.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": true,
+      "toxic_dose_mg_per_kg_per_day": 12,
+      "effective_dose_mg_per_kg_per_day": 4,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 10,
+      "indication": "gram-negative infection",
+      "notes": "Cmax/MIC; TDM"
+    },
+    "amikacin": {
+      "cl_adult_l_h": 5.4,
+      "vd_adult_l": 18.0,
+      "fm": {
+        "renal_gfr": 0.95
+      },
+      "target_metric": "cmax",
+      "typical_adult_dose_mg_per_day": 1050,
+      "oral_bioavailability": 0.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": true,
+      "toxic_dose_mg_per_kg_per_day": 30,
+      "effective_dose_mg_per_kg_per_day": 15,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 10,
+      "indication": "resistant gram-negative infection",
+      "notes": "Cmax/MIC; TDM"
+    },
+    "ampicillin": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 21.0,
+      "fm": {
+        "renal_gfr": 0.9
+      },
+      "target_metric": "time_mic",
+      "typical_adult_dose_mg_per_day": 8000,
+      "oral_bioavailability": 0.4,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 400,
+      "effective_dose_mg_per_kg_per_day": 25,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 18,
+      "indication": "neonatal sepsis / listeria",
+      "notes": "time>MIC proxy"
+    },
+    "meropenem": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 21.0,
+      "fm": {
+        "renal_gfr": 0.7
+      },
+      "target_metric": "time_mic",
+      "typical_adult_dose_mg_per_day": 3000,
+      "oral_bioavailability": 0.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 120,
+      "effective_dose_mg_per_kg_per_day": 30,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 2,
+      "indication": "serious gram-negative / meningitis",
+      "notes": "time>MIC \u03b2-lactam"
+    },
+    "cefotaxime": {
+      "cl_adult_l_h": 18.0,
+      "vd_adult_l": 25.0,
+      "fm": {
+        "renal_gfr": 0.6
+      },
+      "target_metric": "time_mic",
+      "typical_adult_dose_mg_per_day": 6000,
+      "oral_bioavailability": 0.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 300,
+      "effective_dose_mg_per_kg_per_day": 50,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [
+        "desacetyl-cefotaxime"
+      ],
+      "protein_binding_percent": 35,
+      "indication": "neonatal sepsis / meningitis",
+      "notes": "active metabolite minor"
+    },
+    "acyclovir": {
+      "cl_adult_l_h": 20.0,
+      "vd_adult_l": 48.0,
+      "fm": {
+        "renal_gfr": 0.8
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 3000,
+      "oral_bioavailability": 0.2,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 60,
+      "effective_dose_mg_per_kg_per_day": 15,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 15,
+      "indication": "HSV / VZV (neonatal HSV)",
+      "notes": "renal clearance; hydrate"
+    },
+    "levetiracetam": {
+      "cl_adult_l_h": 2.6,
+      "vd_adult_l": 50.0,
+      "fm": {
+        "renal_gfr": 0.66
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 2000,
+      "oral_bioavailability": 1.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 100,
+      "effective_dose_mg_per_kg_per_day": 20,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 0,
+      "indication": "seizures",
+      "notes": "mostly renal unchanged"
+    },
+    "midazolam": {
+      "cl_adult_l_h": 24.0,
+      "vd_adult_l": 70.0,
+      "fm": {
+        "cyp3a4": 0.95
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 10,
+      "oral_bioavailability": 0.4,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 6,
+      "effective_dose_mg_per_kg_per_day": 0.5,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp3a4"
+      ],
+      "enzymes": [
+        "CYP3A4"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [
+        "1-OH-midazolam"
+      ],
+      "protein_binding_percent": 97,
+      "indication": "sedation",
+      "notes": "high PB; first-pass oral"
+    },
+    "fentanyl": {
+      "cl_adult_l_h": 50.0,
+      "vd_adult_l": 280.0,
+      "fm": {
+        "cyp3a4": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 1.0,
+      "oral_bioavailability": 0.33,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 0.2,
+      "effective_dose_mg_per_kg_per_day": 0.01,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp3a4"
+      ],
+      "enzymes": [
+        "CYP3A4"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [],
+      "protein_binding_percent": 84,
+      "indication": "analgesia/sedation",
+      "notes": "mcg dosing; potent"
+    },
+    "clindamycin": {
+      "cl_adult_l_h": 15.0,
+      "vd_adult_l": 60.0,
+      "fm": {
+        "cyp3a4": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 1800,
+      "oral_bioavailability": 0.9,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 60,
+      "effective_dose_mg_per_kg_per_day": 8,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp3a4"
+      ],
+      "enzymes": [
+        "CYP3A4"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 90,
+      "indication": "anaerobic / gram-positive",
+      "notes": "high PB"
+    },
+    "morphine": {
+      "cl_adult_l_h": 90.0,
+      "vd_adult_l": 230.0,
+      "fm": {
+        "ugt2b7": 0.7
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 30,
+      "oral_bioavailability": 0.25,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 2,
+      "effective_dose_mg_per_kg_per_day": 0.1,
+      "elimination": "hepatic",
+      "pathways": [
+        "ugt2b7"
+      ],
+      "enzymes": [
+        "UGT2B7"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [
+        "M6G",
+        "M3G"
+      ],
+      "protein_binding_percent": 35,
+      "indication": "analgesia",
+      "notes": "M6G renally cleared"
+    },
+    "caffeine": {
+      "cl_adult_l_h": 6.0,
+      "vd_adult_l": 45.0,
+      "fm": {
+        "cyp1a2": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 200,
+      "oral_bioavailability": 1.0,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 20,
+      "effective_dose_mg_per_kg_per_day": 2.5,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp1a2"
+      ],
+      "enzymes": [
+        "CYP1A2"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 35,
+      "indication": "apnea of prematurity (caffeine citrate)",
+      "notes": "neonatal AOP standard"
+    },
+    "theophylline": {
+      "cl_adult_l_h": 3.0,
+      "vd_adult_l": 35.0,
+      "fm": {
+        "cyp1a2": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 600,
+      "oral_bioavailability": 0.96,
+      "route_default": "iv",
+      "narrow_therapeutic_index": true,
+      "toxic_dose_mg_per_kg_per_day": 24,
+      "effective_dose_mg_per_kg_per_day": 10,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp1a2"
+      ],
+      "enzymes": [
+        "CYP1A2"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 40,
+      "indication": "apnea / bronchospasm (historical)",
+      "notes": "NTI; TDM"
+    },
+    "phenytoin": {
+      "cl_adult_l_h": 2.5,
+      "vd_adult_l": 45.0,
+      "fm": {
+        "cyp2c9": 0.8
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 400,
+      "oral_bioavailability": 0.9,
+      "route_default": "iv",
+      "narrow_therapeutic_index": true,
+      "toxic_dose_mg_per_kg_per_day": 20,
+      "effective_dose_mg_per_kg_per_day": 4,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp2c9"
+      ],
+      "enzymes": [
+        "CYP2C9"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 90,
+      "indication": "seizures",
+      "notes": "nonlinear PK; high PB; TDM"
+    },
+    "ibuprofen": {
+      "cl_adult_l_h": 3.5,
+      "vd_adult_l": 10.0,
+      "fm": {
+        "cyp2c9": 0.9
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 1200,
+      "oral_bioavailability": 0.8,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 40,
+      "effective_dose_mg_per_kg_per_day": 5,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp2c9"
+      ],
+      "enzymes": [
+        "CYP2C9"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 99,
+      "indication": "PDA closure / analgesia",
+      "notes": "very high PB; neonate PDA use"
+    },
+    "phenobarbital": {
+      "cl_adult_l_h": 0.3,
+      "vd_adult_l": 40.0,
+      "fm": {
+        "cyp2c19": 0.5,
+        "cyp2c9": 0.2
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 100,
+      "oral_bioavailability": 0.9,
+      "route_default": "iv",
+      "narrow_therapeutic_index": true,
+      "toxic_dose_mg_per_kg_per_day": 10,
+      "effective_dose_mg_per_kg_per_day": 3,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp2c19",
+        "cyp2c9"
+      ],
+      "enzymes": [
+        "CYP2C19",
+        "CYP2C9"
+      ],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 50,
+      "indication": "neonatal seizures",
+      "notes": "long half-life; TDM; mixed CYP"
+    },
+    "fluconazole": {
+      "cl_adult_l_h": 1.2,
+      "vd_adult_l": 45.0,
+      "fm": {
+        "renal_gfr": 0.8
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 200,
+      "oral_bioavailability": 0.9,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 20,
+      "effective_dose_mg_per_kg_per_day": 3,
+      "elimination": "renal",
+      "pathways": [
+        "renal_gfr"
+      ],
+      "enzymes": [],
+      "transporters": [],
+      "active_metabolites": [],
+      "protein_binding_percent": 11,
+      "indication": "candida / prophylaxis",
+      "notes": "mostly renal unchanged"
+    },
+    "metronidazole": {
+      "cl_adult_l_h": 4.0,
+      "vd_adult_l": 50.0,
+      "fm": {
+        "cyp2c9": 0.3,
+        "cyp3a4": 0.2
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 1500,
+      "oral_bioavailability": 0.95,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 60,
+      "effective_dose_mg_per_kg_per_day": 15,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp2c9",
+        "cyp3a4"
+      ],
+      "enzymes": [
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "transporters": [],
+      "active_metabolites": [
+        "hydroxy-metronidazole"
+      ],
+      "protein_binding_percent": 20,
+      "indication": "anaerobic / NEC-related",
+      "notes": "hepatic metabolism; active metabolite"
+    },
+    "ondansetron": {
+      "cl_adult_l_h": 30.0,
+      "vd_adult_l": 140.0,
+      "fm": {
+        "cyp3a4": 0.5,
+        "cyp1a2": 0.2,
+        "cyp2d6": 0.2
+      },
+      "target_metric": "css",
+      "typical_adult_dose_mg_per_day": 24,
+      "oral_bioavailability": 0.6,
+      "route_default": "iv",
+      "narrow_therapeutic_index": false,
+      "toxic_dose_mg_per_kg_per_day": 1.0,
+      "effective_dose_mg_per_kg_per_day": 0.1,
+      "elimination": "hepatic",
+      "pathways": [
+        "cyp3a4",
+        "cyp1a2",
+        "cyp2d6"
+      ],
+      "enzymes": [
+        "CYP3A4",
+        "CYP1A2",
+        "CYP2D6"
+      ],
+      "transporters": [
+        "P-gp"
+      ],
+      "active_metabolites": [],
+      "protein_binding_percent": 70,
+      "indication": "nausea / vomiting",
+      "notes": "multi-CYP; used in neonates off-label carefully"
+    }
+  }
+}

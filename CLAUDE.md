@@ -6,18 +6,11 @@ cited, auditable rationale. **Decision support, not prescribing.**
 
 
 ## RULES:
-1. If you want to check browser use browser harness first. if allow external debugging is not enabled ask user to do it. It is more token efficient.
-  If browser harness cant solve the problem and you must have to use browser then use claude in chrome.
-2. read handoff saved at /private/tmp/
-3. Read Checklist.md for any task remaining and ask user if he want to continue remaining tasks. Also if the work is too long rather than saving work in plan.md use checklist.md for it.
+1. If you want to check a generated or local site, use the `playwright-web-check` skill (global Playwright).
 4. Root `validation_set/` and `result*.md` are harness-only oracles. Backend product code must
    never import, open, or mention `validation_set`.
 5. Before making changes to any branches ask user which branch would be suited for changes.
 
-## Demo mode
-Root `demo/pk.json` + `demo/guidelines.json` + `backend/demo_pack.py`: when a listed drug is
-requested, `retrieval.fetch` returns `source_mode="demo"` and **skips live PubMed/openFDA**.
-Disable with `PAEDSCALE_DEMO=0`. Other drugs still use the live path.
 ## Core thesis
 Drug clearance does not scale linearly with body size in early life — the organs that
 eliminate the drug are still maturing. Scaling an adult dose by weight over-doses the young.
@@ -35,7 +28,7 @@ backend/                    (run all commands from here; backend/ is the package
     pk_cache.py             bounded in-process LRU for live dossiers (Render single-dyno shared pool)
     mechanism_score.py      mechanistic-reasoning scorer (6 PRD dimensions)
   retrieval/                retrieval subagent + tools (package; `import retrieval` → __init__.py)
-    __init__.py             RETRIEVAL SUBAGENT → demo pack | live | cache | abstain
+    __init__.py             RETRIEVAL SUBAGENT → live | cache | abstain
     retrieval_tools.py      httpx: PubMed E-utilities + openFDA + web_fetch
   agents/
     agent.py                Opus ORCHESTRATOR: load_skill → retrieve → compute → edge_cases → grade
@@ -44,14 +37,10 @@ backend/                    (run all commands from here; backend/ is the package
     mcp_server.py           MCP server for the same retrieval tools (FastMCP, stdio)
   tests/                    test_pk.py / test_agent.py
   skills/                   lean markdown skills (mechanism, pubmed, openfda, webfetch, edge_cases)
-  demo_pack.py              DEMO ONLY: load root demo/ JSON (skip live retrieval); top-level module
   eval_data/                ANSWER KEYS ONLY — harness never product path
-demo/                       DEMO BRANCH ONLY: curated pk.json + guidelines.json
 ```
 
 **On master:** no hardcoded per-drug PK in the product path — live retrieve or abstain.
-**On `demo`:** curated `demo/` pack short-circuits retrieval for all **20** validation drugs
-(`source_mode=demo`, PK + guidelines offline). `eval_data/` remains harness/dev only.
 
 Split of labour: **Python does the arithmetic; Claude does the judgment** (drug → pathway
 → maturation-curve mapping and the written justification). This is the whole point — the
@@ -142,5 +131,3 @@ subagent + orchestrator + guideline search). The <60 s target is the tuning goal
 ## Budget / scope
 Target < $1 and < 60 s per query. Default model `claude-opus-4-8` (override via
 `ORCHESTRATOR_MODEL`; `claude-sonnet-5` is the cheaper option). 
-Not built yet : caching, DB, auth, dose rounding to
-available formulations.

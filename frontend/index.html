@@ -819,7 +819,7 @@
     <div class="section" id="drugs">
       <h2>Drugs we tested this on</h2>
       <p class="sub">Twenty drugs spanning the elimination-pathway space — renal (GFR), hepatic
-        CYP/UGT, and mixed — each with curated PK and a pediatric guideline for instant offline runs.</p>
+        CYP/UGT, and mixed — each scored against a published pediatric guideline.</p>
       <div class="marquee"><div class="marquee-track" id="drug-track"></div></div>
     </div>
 
@@ -1012,7 +1012,7 @@
     <form class="calc-card" id="form">
       <div class="kicker">New case</div>
       <h2>Dose a child</h2>
-      <p class="intro">Enter a drug and the child’s details. Twenty validated drugs run instantly offline; other drugs retrieve adult PK live.</p>
+      <p class="intro">Enter a drug and the child’s details. Adult PK is retrieved live from PubMed and openFDA.</p>
 
       <div class="field">
         <label for="drug">Drug</label>
@@ -1444,11 +1444,7 @@ function esc(s){ return (s||"").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">"
 /* turn a raw backend step into a cutesy, human-readable console line + stage move */
 function handleStep(text){
   const drugName = (DRUGS[(currentCase.drug||"").toLowerCase()]||{}).name || currentCase.drug;
-  if(text.startsWith("→ demo pack hit")){
-    // demo mode: curated offline PK, no live retrieval
-    advanceTo("retrieve");
-    pushLine(`<span class="arrow">⚗ demo pack</span> — curated PK for <b>${esc(drugName)}</b> (no live retrieval)…`);
-  } else if(text.startsWith("→ live retrieval")){
+  if(text.startsWith("→ live retrieval")){
     // live mode: the retrieval subagent actually hits PubMed + openFDA
     advanceTo("retrieve");
     pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);

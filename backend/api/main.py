@@ -83,6 +83,11 @@ class Case(BaseModel):
     allergies: list[str] | None = None
     conditions: list[str] | None = None
     route: str = "iv"  # "iv" | "oral" — governs the oral-bioavailability correction
+    # Optional vial / oral-liquid strength the clinician actually has. Used only
+    # to convert the rounded dose into mL. Never invents a concentration.
+    formulation_mg_per_ml: float | None = Field(
+        default=None, gt=0, description="Optional formulation strength in mg/mL"
+    )
 
 
 @app.get("/")

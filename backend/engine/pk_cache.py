@@ -38,9 +38,10 @@ class PkCache:
 
     @staticmethod
     def make_key(drug: str, indication: str | None = None) -> str:
-        d = (drug or "").strip().lower()
-        ind = (indication or "").strip().lower()
-        return f"{d}|{ind}"
+        """Adult CL/Vd dossier is indication-agnostic. `indication` is accepted
+        for call-site compatibility and is not part of the key.
+        """
+        return (drug or "").strip().lower()
 
     def stats(self) -> dict:
         with self._lock:

@@ -1,0 +1,232 @@
+{
+  "extracted_at": "2026-08-14",
+  "pathways": [
+    {
+      "proposed_key": "renal_gfr",
+      "label": "Renal (glomerular filtration)",
+      "tm50_weeks_pma": 47.7,
+      "hill": 3.40,
+      "raw_tm50": {"value": 47.7, "unit": "weeks_pma", "notes": "95% CI 45.1–50.5; adult GFR 121.2 mL/min/70 kg (95% CI 117–125) with allometric exponent 3/4."},
+      "conversion": "as published",
+      "equation_matches_engine": true,
+      "pmid": "18846389",
+      "doi": "10.1007/s00467-008-0997-5",
+      "citation": "Rhodin MM, Anderson BJ, Peters AM, Coulthard MG, Wilkins B, Cole M, Chatelut E, Grubb A, Veal GJ, Keir MJ, Holford NH. Human renal function maturation: a quantitative description using weight and postmenstrual age. Pediatr Nephrol. 2009;24(1):67-76.",
+      "quote_or_table": "Assuming an allometric coefficient of 3/4, the fully mature (adult) GFR is predicted to be 121.2 mL/min per 70 kg [95% CI 117–125]. Half of the adult value is reached at 47.7 post-menstrual weeks (95%CI 45.1–50.5), with a Hill coefficient of 3.40 (95%CI 3.03–3.80).",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/18846389/",
+      "confidence": "high",
+      "include_recommendation": "include",
+      "reject_reason": null
+    },
+    {
+      "proposed_key": "cyp3a4",
+      "label": "Hepatic CYP3A4 (midazolam IV clearance)",
+      "tm50_weeks_pma": 73.6,
+      "hill": 3.0,
+      "raw_tm50": {"value": 73.6, "unit": "weeks_pma", "notes": "95% CI 59.4–80.0; Hill 95% CI 2.2–4.1. Mature CL 523 mL·min⁻¹·70 kg⁻¹. Pooled published IV midazolam CL vs PMA; few data 44–80 weeks PMA."},
+      "conversion": "as published",
+      "equation_matches_engine": true,
+      "pmid": "20704661",
+      "doi": "10.1111/j.1460-9592.2010.03364.x",
+      "citation": "Anderson BJ, Larsson P. A maturation model for midazolam clearance. Paediatr Anaesth. 2011;21(3):302-308.",
+      "quote_or_table": "CL maturation, standardized to a 70-kg person was described using the Hill equation. The maturation half-time was 73.6 (95%CI 59.4, 80.0) weeks PMA and the Hill coefficient 3 (95%CI 2.2, 4.1).",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/20704661/",
+      "confidence": "high",
+      "include_recommendation": "include",
+      "reject_reason": null
+    },
+    {
+      "proposed_key": "ugt2b7",
+      "label": "Hepatic UGT2B7 (morphine glucuronidation)",
+      "tm50_weeks_pma": 54.2,
+      "hill": 3.92,
+      "raw_tm50": {"value": 54.2, "unit": "weeks_pma", "notes": "Anand 2008 Table 1: CLmat50 54.2 weeks (95% CI 50.3–60.5), HillCL 3.92 (95% CI 3.25–4.40). Pooled NEOPAIN preterm + Bouwmeester postoperative infants 0–3 y. Ventilated preterms have lower CL than the PMA curve. Anderson 2009 DMPK simultaneous re-fit: TM50 54.6 weeks, Hill 3.83."},
+      "conversion": "as published",
+      "equation_matches_engine": true,
+      "pmid": "18723857",
+      "doi": "10.1093/bja/aen248",
+      "citation": "Anand KJS, Anderson BJ, Holford NHG, Hall RW, Young T, Shephard B, Desai NS, Barton BA; NEOPAIN Trial Investigators Group. Morphine pharmacokinetics and pharmacodynamics in preterm and term neonates: secondary results from the NEOPAIN trial. Br J Anaesth. 2008;101(5):680-689.",
+      "quote_or_table": "Table 1: CLmat50 54.2 weeks (se 4.5%; 95% CI 50.3, 60.5); HillCL 3.92 (se 8.2%; 95% CI 3.25, 4.40). Abstract: Clearance was 50% that of the mature value at 54.2 weeks PMA (CLmat50). Equation: Hill sigmoid on PMA, allometry 70 kg.",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2733178/",
+      "confidence": "high",
+      "include_recommendation": "include",
+      "reject_reason": null
+    },
+    {
+      "proposed_key": "oat1_3",
+      "label": "Renal tubular secretion OAT1/OAT3 (amoxicillin ATS)",
+      "tm50_weeks_pma": 67.3,
+      "hill": 1.17,
+      "raw_tm50": {"value": 27.3, "unit": "weeks_pna", "notes": "Cristea 2021 in-vivo functional CLint,OAT1,3. TM50 27.3 weeks PNA (RSE 28%, ~7 months); Hill 1.17 (RSE 36%). Critically ill children 1 month–15 y. PNA-based sigmoid, not PMA."},
+      "conversion": "TM50_weeks_PMA ≈ 27.3 + 40 = 67.3 (term assumption). Paper used postnatal age, not PMA.",
+      "equation_matches_engine": true,
+      "pmid": "33948771",
+      "doi": "10.1208/s12248-021-00595-9",
+      "citation": "Cristea S, Krekels EHJ, Allegaert K, De Paepe P, de Jaeger A, De Cock P, Knibbe CAJ. Estimation of ontogeny functions for renal transporters using a combined population pharmacokinetic and physiology-based pharmacokinetic approach: application to OAT1,3. AAPS J. 2021;23(3):65.",
+      "quote_or_table": "Eq. 6: ont_OAT1,3 = COV^hill / (COV^hill + TM50^hill). CLint,OAT1,3,in vivo was found to reach half of the adult capacity at a PNA of 27.3 weeks (RSE of 28%), which is around 7 months. The rapid ontogeny of OAT1,3 was captured by a hill exponent of 1.17 (%RSE of 36%).",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8096729/",
+      "confidence": "medium",
+      "include_recommendation": "include",
+      "reject_reason": null
+    },
+    {
+      "proposed_key": "oat1_3_protein",
+      "label": "Renal OAT1/OAT3 protein abundance (not function)",
+      "tm50_weeks_pma": 70.7,
+      "hill": 0.51,
+      "raw_tm50": {"value": 30.7, "unit": "weeks_pna", "notes": "Cheung 2019 LC-MS/MS protein in postmortem kidney cortex. TM50 30.7 weeks PNA (95% CI 16.64–50.97); Hill 0.51 (95% CI 0.35–0.71). Quoted verbatim in Cristea 2021 discussion of Cheung et al. Protein abundance ≠ in-vivo CL."},
+      "conversion": "TM50_weeks_PMA ≈ 30.7 + 40 = 70.7 (term assumption). Paper used PNA weeks.",
+      "equation_matches_engine": true,
+      "pmid": "31127606",
+      "doi": "10.1002/cpt.1516",
+      "citation": "Cheung KWK, van Groen BD, Spaans E, et al. A comprehensive analysis of ontogeny of renal drug transporters: mRNA analyses, quantitative proteomics, and localization. Clin Pharmacol Ther. 2019;106(5):1083-1092.",
+      "quote_or_table": "Cristea quoting Cheung: 'children reaching half of the adult values around 8 months of age (TM50 = 30.7 weeks [95% CI: 16.64–50.97]) and the steepness of the ontogeny slope given by a hill coefficient of 0.51 (95% CI: 0.35–0.71).'",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6777991/",
+      "confidence": "medium",
+      "include_recommendation": "needs_review",
+      "reject_reason": "Hill+TM50 published, but this is protein abundance not clearance; Hill is shallow (0.51). Prefer Cristea in-vivo function if a single OAT key is added."
+    },
+    {
+      "proposed_key": "paracetamol_mixed_ugt",
+      "label": "Paracetamol clearance (UGT1A1/1A6/1A9 + SULT; not a single isoform)",
+      "tm50_weeks_pma": 52.2,
+      "hill": 3.43,
+      "raw_tm50": {"value": 52.2, "unit": "weeks_pma", "notes": "Anderson & Holford DMPK 2009 Table 1 / Table 3 separate-Hill fit: TM50 52.2 weeks (49.8–54.1), Hill 3.43 (3.19–3.96). Simultaneous common-Hill re-fit: TM50 50.1 weeks, Hill 3.4."},
+      "conversion": "as published",
+      "equation_matches_engine": true,
+      "pmid": "19252334",
+      "doi": "10.2133/dmpk.24.25",
+      "citation": "Anderson BJ, Holford NHG. Mechanistic basis of using body size and maturation to predict clearance in humans. Drug Metab Pharmacokinet. 2009;24(1):25-36.",
+      "quote_or_table": "Table 1: Maturation Hill coefficient 3.43 (3.19–3.96); TM50 (weeks) 52.2 (49.8–54.1). Table 3 separate: Hill paracetamol 3.43, TM50 paracetamol 52.2 weeks.",
+      "url": "https://www.jstage.jst.go.jp/article/dmpk/24/1/24_1_25/_pdf",
+      "confidence": "high",
+      "include_recommendation": "needs_review",
+      "reject_reason": "Verified Hill+TM50, but paracetamol CL is mixed UGT1A1/1A6/1A9 plus sulfation. Do not map this curve onto ugt1a1 (or any single UGT key)."
+    },
+    {
+      "proposed_key": "ibuprofen_mixed",
+      "label": "Ibuprofen clearance (CYP2C9-predominant mixed; not a clean isoform curve)",
+      "tm50_weeks_pma": 36.8,
+      "hill": 11.5,
+      "raw_tm50": {"value": 36.8, "unit": "weeks_pma", "notes": "95% CI TM50 34.7–40.9; Hill 8.1–15. Very steep Hill. Drug-level popPK of published CL estimates, not isoform-resolved."},
+      "conversion": "as published",
+      "equation_matches_engine": true,
+      "pmid": "31472084",
+      "doi": "10.1111/pan.13731",
+      "citation": "Anderson BJ, Hannam JA. A target concentration strategy to determine ibuprofen dosing in children. Paediatr Anaesth. 2019;29(11):1100-1106.",
+      "quote_or_table": "The maturation half-time was 36.8 (CV 9.2%, 95%CI 34.7, 40.9) weeks postmenstrual age and the Hill coefficient 11.5 (95%CI 8.1, 15).",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31472084/",
+      "confidence": "medium",
+      "include_recommendation": "needs_review",
+      "reject_reason": "Do not treat as CYP2C9 ontogeny. Rapid almost step-like maturation (Hill 11.5) is a drug CL descriptor; CYP2C9 is also genotype-dominated."
+    }
+  ],
+  "rejected": [
+    {
+      "pathway": "cyp3a4 (engine constants.py 55.4 weeks / Hill 1.83)",
+      "reason": "Opened primary midazolam Hill paper (Anderson & Larsson 2010/11, PMID 20704661) reports TM50 73.6 weeks PMA and Hill 3, not 55.4/1.83. No opened primary reports 55.4 + 1.83 for CYP3A4. 55.4 weeks is close to morphine CLmat50 (54.2), suggesting a possible mix-up. Do not keep the engine pair.",
+      "citation": "Anderson BJ, Larsson P. Paediatr Anaesth. 2011;21:302-308. PMID 20704661."
+    },
+    {
+      "pathway": "ugt2b7 (engine constants.py 88.3 weeks / Hill 1.90)",
+      "reason": "Opened Anand 2008 (PMID 18723857) Table 1 is 54.2 weeks / Hill 3.92. Anderson 2009 DMPK simultaneous fit is 54.6 / 3.83. No opened paper reports 88.3 and 1.90 for morphine/UGT2B7.",
+      "citation": "Anand et al. Br J Anaesth. 2008;101:680-689. PMID 18723857. PMC2733178."
+    },
+    {
+      "pathway": "cyp1a2 (engine 94.0 / 1.5)",
+      "reason": "No TM50+Hill pair found in any opened primary. Salem 2014 (PMID 24671884) describes a non-monotonic function (rise to 3 years then fall to adult) — not the engine Hill sigmoid. Upreti 2016 (PMID 26139104) abstracts ontogeny functions but the Age50/Hill table is paywalled and was not readable here.",
+      "citation": "Salem F et al. Clin Pharmacokinet. 2014;53:625-636. PMID 24671884."
+    },
+    {
+      "pathway": "cyp2d6 (engine 40.0 / 1.0)",
+      "reason": "Allegaert 2015 (PMID 25258277) used a sigmoid maturation model for tramadol→M1 (CLPM TM50 39.8 weeks PMA) but the opened abstract does not report Hill. Adult phenotype is genotype-dominated (PM/IM/EM/UM). Engine 40/1.0 is not quoted in any opened source. Flag: genotype-dominated; do not use a single Hill curve as if it were a typical CYP3A4-style pathway.",
+      "citation": "Allegaert K, Holford N, Anderson BJ, et al. Clin Pharmacokinet. 2015;54:167-178. PMID 25258277."
+    },
+    {
+      "pathway": "cyp2c9 (engine 50.0 / 1.5)",
+      "reason": "No opened primary reports TM50 50 weeks and Hill 1.5 for CYP2C9. Ibuprofen CL (Anderson 2019) is 36.8 / 11.5 and is mixed + genotype-sensitive — not transferable.",
+      "citation": "Anderson BJ, Hannam JA. Paediatr Anaesth. 2019. PMID 31472084."
+    },
+    {
+      "pathway": "cyp2c19 (engine 44.0 / 1.5)",
+      "reason": "No opened primary reports both TM50 and Hill for CYP2C19. Holford 2013 compilation lists pantoprazole TM50 47.99 weeks / Hill 1.48 (review table of a drug, not an isoform paper we opened). Genotype-dominated. Engine 44/1.5 unverified.",
+      "citation": "Holford N, Heo YA, Anderson B. J Pharm Sci. 2013;102:2941-2952. PMID 23650116 (compilation table only)."
+    },
+    {
+      "pathway": "ugt1a1 (engine 70.0 / 1.8)",
+      "reason": "No opened primary reports TM50 70 weeks and Hill 1.8. Paracetamol mixed-UGT TM50 52.2 / Hill 3.43 must not be relabelled UGT1A1. Farhan 2024 (PMID 38898531) developed UGT ontogeny functions but the opened abstract does not publish TM50+Hill.",
+      "citation": "Farhan N, Dahal UP, Wahlstrom J. J Clin Pharmacol. 2024;64:1222-1235. PMID 38898531."
+    },
+    {
+      "pathway": "cyp1a2 / cyp3a4 (Salem 2014 Simcyp-style in-vivo ontogeny)",
+      "reason": "Not the engine Hill form. CYP1A2: increase from birth to 3 years then decrease to adult. CYP3A4: continuous rise reaching adult at ~1.3 years. No TM50+Hill published in the opened abstract.",
+      "citation": "Salem F, Johnson TN, Abduljalil K, Tucker GT, Rostami-Hodjegan A. Clin Pharmacokinet. 2014;53:625-636. PMID 24671884."
+    },
+    {
+      "pathway": "Johnson 2006 Simcyp pediatric (eleven drugs)",
+      "reason": "Opened abstract (PMID 16928154) describes PBPK/Simcyp ontogeny integration but does not publish Hill TM50 values. Per rules, Simcyp piecewise/age-bin functions are rejected unless authors also publish TM50+Hill.",
+      "citation": "Johnson TN, Rostami-Hodjegan A, Tucker GT. Clin Pharmacokinet. 2006;45:931-956. PMID 16928154."
+    },
+    {
+      "pathway": "Upreti 2016 hepatic CYP Age50/Hill meta-analysis",
+      "reason": "This paper is the most likely source of a complete CYP Hill table (in-vivo vs in-vitro Age50 + Hill for major CYPs). Opened PubMed abstract (PMID 26139104) does not contain the numbers. Wiley full text was not retrievable. Cannot invent or recall the table.",
+      "citation": "Upreti VV, Wahlstrom JL. J Clin Pharmacol. 2016;56:266-283. PMID 26139104. DOI 10.1002/jcph.585."
+    },
+    {
+      "pathway": "Anderson 2008 Annu Rev Pharmacol Toxicol (conceptual review)",
+      "reason": "Opened abstract (PMID 17914927) describes the Hill/sigmoid Emax maturation concept and allometry but does not publish pathway TM50+Hill numbers. Those numbers appear in later primary papers (Rhodin, Anand, Anderson/Larsson).",
+      "citation": "Anderson BJ, Holford NHG. Annu Rev Pharmacol Toxicol. 2008;48:303-332. PMID 17914927."
+    },
+    {
+      "pathway": "Holford 2013 pharmacokinetic standard (46-drug table)",
+      "reason": "Opened full PDF (PMID 23650116). Table 1 compiles many drug-level TM50/Hill pairs (midazolam 73.6/3, morphine 58.1/3.58, paracetamol 52.2/3.43, GFR 47.7/3.4, vancomycin 33.3/3.68, dexmedetomidine 44.5/2.56, etc.). Useful pointer to primaries, but these are drug CL descriptors not isoform keys. Tramadol row is 'asymptotic exponential' not Hill.",
+      "citation": "Holford N, Heo YA, Anderson B. J Pharm Sci. 2013;102:2941-2952. PMID 23650116. https://www.jpharmsci.org/article/S0022-3549(15)30935-7/pdf"
+    },
+    {
+      "pathway": "cyp3a7 (fetal CYP3A, declining)",
+      "reason": "Declining fetal isoform. A rising Hill MF(PMA) is the wrong functional form. No opened paper publishes TM50+Hill for a declining CYP3A7 curve that could be dropped into the engine.",
+      "citation": "Salem 2014 and CYP3A7–CYP3A4 switch literature (e.g. PMID 24676942) — not Hill TM50."
+    },
+    {
+      "pathway": "Ince 2013 midazolam 'novel maturation function'",
+      "reason": "Opened PubMed abstract (PMID 23512668) describes a non-standard maturation function from preterm 26 weeks GA to adults, not the engine Hill TM50 form.",
+      "citation": "Ince I et al. Clin Pharmacokinet. 2013;52:555-565. PMID 23512668."
+    },
+    {
+      "pathway": "cyp2d6 / tramadol CLPM",
+      "reason": "Sigmoid used (Allegaert 2015) and TM50 39.8 weeks PMA for M1 formation is in the opened abstract, but Hill is not. Genotype mixture model is required. Reject as a single engine Hill key.",
+      "citation": "Allegaert et al. Clin Pharmacokinet. 2015;54:167-178. PMID 25258277."
+    },
+    {
+      "pathway": "dexmedetomidine / CYP2A6",
+      "reason": "Potts 2009 abstract (PMID 19708909) says clearance maturation used the Hill equation but does not print TM50 or Hill. Holford 2013 compilation lists 44.5 weeks / 2.56; PAGE Anderson slides list 46.5 / 2.78. Numbers not verified in the opened primary.",
+      "citation": "Potts AL et al. Paediatr Anaesth. 2009;19:1119-1129. PMID 19708909."
+    },
+    {
+      "pathway": "ces1 / plasma esterases / oseltamivir",
+      "reason": "No opened paper gave TM50+Hill for CES1 or plasma esterases. Remifentanil is described as mature at birth (Holford 2013). Oseltamivir-carboxylate TM50 45.6 weeks / Hill 2.35 (search hit, PMC7325316) is OC renal CL, not CES1 hydrolysis — not opened here, not included.",
+      "citation": "Not verified in an opened source."
+    },
+    {
+      "pathway": "cyp2b6 / cyp2c8 / cyp2e1 / cyp3a5",
+      "reason": "No opened primary published TM50+Hill for these isoforms. Upreti 2016 likely contains them but the table was not readable.",
+      "citation": "Upreti & Wahlstrom 2016 PMID 26139104 (table not opened)."
+    },
+    {
+      "pathway": "ugt1a9 / ugt1a6 / nat2 / sult1a1",
+      "reason": "No opened primary published TM50+Hill. Farhan 2024 and Ladumor 2019 SULT papers were located but abstracts do not give both parameters.",
+      "citation": "Farhan 2024 PMID 38898531; Ladumor et al. PMC6614793."
+    },
+    {
+      "pathway": "abcb1 / p-gp / oct2",
+      "reason": "Cheung 2019 (opened PMC6777991) reports sigmoid Emax protein ontogeny for P-gp and OCT2 and states they reach half-adult expression younger than OAT1/3, but the exact TM50+Hill numbers were not recovered from the opened HTML (table/figure not fully extracted). Do not invent.",
+      "citation": "Cheung et al. Clin Pharmacol Ther. 2019;106:1083-1092. PMID 31127606."
+    },
+    {
+      "pathway": "tubular secretion (undifferentiated ATS / PAH)",
+      "reason": "Hayton-style net secretion (cited by Cristea) is not a published Hill TM50+Hill pair in an opened paper. Use oat1_3 if a secretion key is needed.",
+      "citation": "Cristea 2021 discussion of Hayton; not extracted as TM50+Hill."
+    }
+  ],
+  "notes": "Engine form MF = PMA^H / (TM50^H + PMA^H) is algebraically identical to MF = 1 / (1 + [PMA/TM50]^(-H)) used by Anderson/Holford. All included TM50 values are PMA weeks except oat1_3 / oat1_3_protein, which were published as PNA weeks and converted with +40 (term). Do not convert values already in PMA weeks.\n\nCurrent backend/engine/constants.py does NOT match opened primaries for CYP3A4 (55.4/1.83 vs 73.6/3) or UGT2B7 (88.3/1.90 vs 54.2/3.92). CYP1A2, CYP2D6, CYP2C9, CYP2C19, UGT1A1 engine rows were not found in any opened paper and should be treated as unverified approximations.\n\nUpreti 2016 is the highest-value unread source for a complete CYP Hill table (Age50 years PNA + Hill). Farhan 2024 is the analogue for UGTs. Both full texts were paywalled.\n\nCYP2D6 / CYP2C9 / CYP2C19 should not be single Hill keys even if a TM50 is later found: genotype (PM/IM/EM/UM) dominates adult activity. CYP3A7 is declining and must not use a rising Hill.\n\nAdult-normalization in the engine (MF_adult ≈ 1 at PMA 2080 weeks) is a separate step after the published raw Hill; published TM50/Hill above are the un-normalized published parameters."
+}

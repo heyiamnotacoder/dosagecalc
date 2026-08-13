@@ -445,6 +445,23 @@
   .dose-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px;font-size:.92rem;color:var(--ink-2)}
   .dose-meta .m b{color:var(--ink);font-weight:600}
   .dose-meta .sep{width:3px;height:3px;border-radius:50%;background:var(--ink-3);opacity:.55;flex:none}
+  .res-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .give-box{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--teal-wash);border:1px solid #b7d9d2}
+  .give-box .give{font-size:1.02rem;color:var(--teal-deep);font-weight:600}
+  .give-box .raw{margin-top:4px;font-size:.82rem;color:var(--ink-2)}
+  .print-banner{display:none}
+  @media print{
+    .topbar,.ask-block,.chat-input,.no-print,.calc-links,.keyhint{display:none!important}
+    body{background:#fff;color:#111}
+    #view-result.view.active{display:block}
+    .res-top,.res-flow{max-width:none;padding:0;margin:0}
+    .res-flow{padding-bottom:0}
+    .panel{box-shadow:none;border:1px solid #ccc}
+    .grade .tip{display:none!important}
+    .print-banner{display:block;font-family:var(--mono);font-size:.78rem;letter-spacing:.04em;
+      text-transform:uppercase;color:#0A564B;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #D5DFDF}
+    @page{margin:14mm}
+  }
   .grade{font-family:var(--mono);font-weight:600;font-size:1rem;padding:8px 16px;border-radius:11px;align-self:center;flex:none;
     position:relative;cursor:help;outline:none}
   .grade .lab{display:block;font-size:.62rem;letter-spacing:.14em;opacity:.75}
@@ -1145,6 +1162,12 @@
         <div class="hint">Child-Pugh class is recorded for review; dose adjustment is drug-specific.</div>
       </div>
 
+      <div class="field">
+        <label for="formulation">Formulation strength <span style="font-weight:400;color:var(--ink-3)">(optional, mg/mL)</span></label>
+        <input id="formulation" type="number" step="0.1" min="0" placeholder="e.g. 5 if the vial is 5 mg/mL">
+        <div class="hint">Used only to convert the rounded dose into mL of the product you have. Left blank, we still round to a practical mg amount.</div>
+      </div>
+
       <button class="btn go" id="go" type="submit">Reason to a dose →</button>
       <div class="keyhint" id="keyhint"></div>
       <div class="calc-links">
@@ -1223,7 +1246,10 @@
 <section id="view-result" class="view">
   <div class="res-top">
     <div class="case-sum" id="case-sum"></div>
-    <button class="btn ghost" onclick="go('calc')">＋ New calculation</button>
+    <div class="res-actions no-print">
+      <button class="btn ghost" type="button" onclick="printCaseCard()">Print case card</button>
+      <button class="btn ghost" type="button" onclick="go('calc')">＋ New calculation</button>
+    </div>
   </div>
   <div class="res-flow">
     <div class="res-main" id="res-main"></div>
@@ -1448,6 +1474,9 @@ function handleStep(text){
     // live mode: the retrieval subagent actually hits PubMed + openFDA
     advanceTo("retrieve");
     pushLine(`<span class="arrow">⚗ firing retrieval subagent</span> — scanning PubMed + openFDA for <b>${esc(drugName)}</b>…`);
+  } else if(/pk_cache hit/i.test(text)){
+    advanceTo("retrieve");
+    pushLine(`<span class="arrow">⚗ cache</span> — reused cited adult PK for <b>${esc(drugName)}</b>; skipped live PubMed`);
   } else if(text.startsWith("→ retrieve_drug_data")){
     // neutral pre-fetch step: advance the stage only; the mode-specific line follows
     advanceTo("retrieve");
@@ -1504,6 +1533,8 @@ $("form").addEventListener("submit", async (e)=>{
     hepatic_impairment: $("hepatic").checked,
     route: document.querySelector('input[name="route"]:checked').value,
   };
+  const conc = parseFloat($("formulation").value);
+  if(Number.isFinite(conc) && conc > 0) payload.formulation_mg_per_ml = conc;
   const ga = $("ga").value;
   if(ageY < 2 && ga && Number.isFinite(parseFloat(ga))) payload.gestational_age_weeks = parseFloat(ga);
   if(ageY < 2 && Number.isFinite(pnaDays) && pnaDays >= 0){
@@ -1618,9 +1649,11 @@ function renderResult(data){
     + (c.indication?` · ${esc(c.indication)}`:"")
     + (c.renal_impairment?` · renal impairment`:"") + (c.hepatic_impairment?` · hepatic impairment`:"")
     + (c.allergies&&c.allergies.length?` · allergies: ${esc(c.allergies.join(", "))}`:"")
-    + (c.conditions&&c.conditions.length?` · conditions: ${esc(c.conditions.join(", "))}`:"");
+    + (c.conditions&&c.conditions.length?` · conditions: ${esc(c.conditions.join(", "))}`:"")
+    + (c.formulation_mg_per_ml?` · ${esc(String(c.formulation_mg_per_ml))} mg/mL`:"");
 
-  let h = `<div class="panel">`;
+  let h = `<div class="print-banner">PaedScale case card · decision support, not a prescription · ${new Date().toISOString().slice(0,10)}</div>`;
+  h += `<div class="panel">`;
 
   // hard-stop banner: a non-prescribable case shows an error, never a dose
   const blockReason = r.block_reason || ((r.flags||[]).find(f=>/SAFETY STOP/i.test(f))||"").replace(/^SAFETY STOP:\s*/i,"");
@@ -1639,6 +1672,26 @@ function renderResult(data){
   if(r.interval) metrics.push(`<span class="m">${esc(r.interval)}</span>`);
   if(r.route) metrics.push(`<span class="m">${esc(r.route)}</span>`);
   if(metrics.length) h += `<div class="dose-meta">${metrics.join('<span class="sep"></span>')}</div>`;
+  const admin = r.administration;
+  if(admin && !blocked){
+    const bits = [];
+    if(admin.rounded_dose_mg_per_dose!=null && admin.doses_per_day){
+      const everyH = (24 / admin.doses_per_day);
+      const everyTxt = Number.isInteger(everyH) ? everyH : everyH.toFixed(1);
+      bits.push(`${admin.rounded_dose_mg_per_dose} mg every ${everyTxt} h`);
+    } else if(admin.rounded_dose_mg_per_day!=null){
+      bits.push(`${admin.rounded_dose_mg_per_day} mg/day`);
+    }
+    if(admin.volume_ml_per_dose!=null && admin.formulation_mg_per_ml!=null){
+      bits.push(`${admin.volume_ml_per_dose} mL of ${admin.formulation_mg_per_ml} mg/mL`);
+    }
+    if(bits.length){
+      h += `<div class="give-box"><div class="give">Give ≈ ${bits.join(" · ")}</div>`;
+      h += `<div class="raw">Rounded for administration. Engine estimate ${admin.engine_dose_mg_per_day} mg/day`;
+      if(admin.engine_dose_mg_per_kg_per_day!=null) h += ` (${admin.engine_dose_mg_per_kg_per_day} mg/kg/day)`;
+      h += ` — unrounded.</div></div>`;
+    }
+  }
   h += `</div><div class="grade ${g}" tabindex="0" aria-label="Evidence grade ${g}. Hover for legend.">`
      + `<span class="lab">GRADE</span>${g}`
      + `<div class="tip" role="tooltip">`
@@ -1803,6 +1856,10 @@ async function askChat(q){
   typing.scrollIntoView({behavior:"smooth", block:"nearest"});
 }
 $("chat-form").addEventListener("submit", e=>{ e.preventDefault(); askChat($("chat-q").value); });
+
+function printCaseCard(){
+  window.print();
+}
 </script>
 </body>
 </html>

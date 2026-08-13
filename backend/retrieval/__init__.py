@@ -29,8 +29,8 @@ fill gaps with pubmed (skill 'pubmed') or web_fetch (skill 'webfetch') for a spe
 Load a skill with load_skill before using that method if you need the protocol.
 
 Cite-or-abstain: null any number you cannot source. Empty lists OK.
-Adult values = 70 kg. fm keys: renal_gfr, cyp3a4, ugt2b7, cyp1a2, cyp2d6, cyp2c9, cyp2c19, ugt1a1
-(map real enzymes onto these; omit fm if no engine key)."""
+Adult values = 70 kg. fm keys: renal_gfr, cyp3a4, ugt2b7
+(map real enzymes onto these; omit fm if no engine key — do not invent a curve)."""
 
 DOSSIER_TOOL = {
     "name": "submit_dossier",

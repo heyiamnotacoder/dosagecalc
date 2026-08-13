@@ -1,0 +1,273 @@
+{
+  "validated_at": "2026-08-14",
+  "validator_notes": "Every ACCEPT row was opened; quoted TM50 and Hill were read on the page. Algebraic identity: PMA^H/(TM50^H+PMA^H) == 1/(1+(PMA/TM50)^(-H)). Current engine constants.py compared. No invented numbers. Upreti 2016 and Farhan 2024 full tables remain unread (paywalled) — not accepted from memory.",
+  "rows": [
+    {
+      "proposed_key": "renal_gfr",
+      "verdict": "ACCEPT",
+      "tm50_weeks_pma": 47.7,
+      "hill": 3.4,
+      "action": "keep_current",
+      "pmid": "18846389",
+      "doi": "10.1007/s00467-008-0997-5",
+      "citation": "Rhodin MM et al. Pediatr Nephrol. 2009;24:67-76.",
+      "equation_matches_engine": true,
+      "units": "weeks PMA as published",
+      "evidence": "Opened PubMed 18846389 abstract: 'A sigmoid hyperbolic model described the nonlinear relationship between GFR maturation and PMA. ... Half of the adult value is reached at 47.7 post-menstrual weeks (95%CI 45.1-50.5), with a Hill coefficient of 3.40 (95%CI 3.03-3.80).' Same pair restated in Anderson & Holford DMPK 2009 (opened J-Stage PDF): 'TM50 47.7 (95%CI 45.1-50.5) weeks PMA and Hill coefficient of 3.4 (95%CI 3.0-3.8).'",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/18846389/",
+      "secondary_url_opened": "https://www.jstage.jst.go.jp/article/dmpk/24/1/24_1_25/_pdf",
+      "current_engine": {"tm50_weeks": 47.7, "hill": 3.4},
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "cyp3a4",
+      "verdict": "ACCEPT",
+      "tm50_weeks_pma": 73.6,
+      "hill": 3.0,
+      "action": "replace_current",
+      "pmid": "20704661",
+      "doi": "10.1111/j.1460-9592.2010.03364.x",
+      "citation": "Anderson BJ, Larsson P. Paediatr Anaesth. 2011;21:302-308.",
+      "equation_matches_engine": true,
+      "units": "weeks PMA as published",
+      "evidence": "Opened PubMed 20704661 abstract: 'CL maturation, standardized to a 70-kg person was described using the Hill equation. Mature CL was 523 (CV 32%, 95%CI 469, 597) ml·min(-1)·70 kg(-1). The maturation half-time was 73.6 (95%CI 59.4, 80.0) weeks PMA and the Hill coefficient 3 (95%CI 2.2, 4.1).' Paper exists (PMID/DOI/title match). Current engine 55.4 / 1.83 was not printed on any page opened in this pass.",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/20704661/",
+      "current_engine": {"tm50_weeks": 55.4, "hill": 1.83},
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "ugt2b7",
+      "verdict": "ACCEPT",
+      "tm50_weeks_pma": 54.2,
+      "hill": 3.92,
+      "action": "replace_current",
+      "pmid": "18723857",
+      "doi": "10.1093/bja/aen248",
+      "citation": "Anand KJS, Anderson BJ, Holford NHG et al. Br J Anaesth. 2008;101:680-689.",
+      "equation_matches_engine": true,
+      "units": "weeks PMA as published",
+      "evidence": "Opened PMC2733178 full text Table 1: CLmat50 54.2 weeks (95% CI 50.3, 60.5); HillCL 3.92 (95% CI 3.25, 4.40). Methods: 'The relationship between postmenstrual age (PMA) and clearance was investigated using a sigmoidal Emax or Hill equation' with CLmat50 = PMA at 50% mature CL. Abstract: 'Clearance was 50% that of the mature value at 54.2 weeks PMA (CLmat50)'. Same pair quoted on opened PMC3018029 (Mahmood 2011): 'CLmat50 = 54.2 weeks, HillCL = 3.92'. Anderson DMPK 2009 Table 3 (opened PDF) reprints Anand separate-Hill 54.2 / 3.92 and a simultaneous re-fit 54.6 / 3.83. Current engine 88.3 / 1.90 was not printed for morphine CL; Anand Table 1 Tvol is 88.8 days (volume, not CL TM50).",
+      "url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2733178/",
+      "secondary_url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3018029/",
+      "current_engine": {"tm50_weeks": 88.3, "hill": 1.9},
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "oat1_3",
+      "verdict": "NEEDS_REVIEW",
+      "tm50_weeks_pma": 67.3,
+      "hill": 1.17,
+      "action": "do_not_add",
+      "pmid": "33948771",
+      "doi": "10.1208/s12248-021-00595-9",
+      "citation": "Cristea S et al. AAPS J. 2021;23:65.",
+      "equation_matches_engine": true,
+      "units": "published as weeks PNA, not PMA. Extract conversion 27.3+40=67.3 is arithmetic-correct only under a term-birth assumption that the paper does not write.",
+      "evidence": "Opened PMC8096729: 'CLint, OAT1,3, in vivo was found to reach half of the adult capacity at a PNA of 27.3 weeks (RSE of 28%), which is around 7 months. The rapid ontogeny of OAT1,3 was captured by a hill exponent of 1.17 (%RSE of 36%).' Eq. 6 is ont = COV^hill / (COV^hill + TM50^hill) with COV = postnatal age. Paper exists. Do not drop 67.3 weeks PMA into the engine: the published covariate is PNA; +40 PMA conversion is not written in the source; cohort is critically ill children 1 month–15 y.",
+      "url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8096729/",
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "oat1_3_protein",
+      "verdict": "NEEDS_REVIEW",
+      "tm50_weeks_pma": 70.7,
+      "hill": 0.51,
+      "action": "do_not_add",
+      "pmid": "31127606",
+      "doi": "10.1002/cpt.1516",
+      "citation": "Cheung KWK et al. Clin Pharmacol Ther. 2019;106:1083-1092.",
+      "equation_matches_engine": true,
+      "units": "published as weeks PNA (quoted); +40 PMA conversion is extract-side, not written in Cheung HTML recovered here",
+      "evidence": "Opened PMC8096729 quoting Cheung: 'children reaching half of the adult values around 8 months of age (TM50 = 30.7 weeks [95% CI: 16.64–50.97]) and the steepness of the ontogeny slope given by a hill coefficient of 0.51 (95% CI: 0.35–0.71).' Opened Cheung PMC6777991: paper exists (PMID 31127606) and reports sigmoid ontogeny of OAT1/OAT3 protein, but the TM50/Hill pair was not recovered from the Cheung HTML (table/figure not fully extracted). Protein abundance ≠ clearance. Prefer Cristea in-vivo function if a single OAT key is ever added; still PNA-based.",
+      "url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6777991/",
+      "secondary_url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8096729/",
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "paracetamol_mixed_ugt",
+      "verdict": "NEEDS_REVIEW",
+      "tm50_weeks_pma": 52.2,
+      "hill": 3.43,
+      "action": "do_not_add",
+      "pmid": "19252334",
+      "doi": "10.2133/dmpk.24.25",
+      "citation": "Anderson BJ, Holford NHG. Drug Metab Pharmacokinet. 2009;24:25-36.",
+      "equation_matches_engine": true,
+      "units": "weeks PMA as published",
+      "evidence": "Opened J-Stage PDF. Page 27 prints the engine Hill: MF = PMA^Hill / (TM50^Hill + PMA^Hill). Table 1: Maturation Hill coefficient 3.43 (3.19–3.96); TM50 (weeks) 52.2 (49.8–54.1). Table 3 separate-Hill: Hill paracetamol 3.43, TM50 52.2 weeks; simultaneous common-Hill re-fit TM50 50.1 / Hill 3.4. Text: paracetamol is 'cleared by glucuronide (UGT1A1, UGT1A6, UGT1A9) and sulphate conjugation'. Numbers are real; do not map onto ugt1a1.",
+      "url_opened": "https://www.jstage.jst.go.jp/article/dmpk/24/1/24_1_25/_pdf",
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "ibuprofen_mixed",
+      "verdict": "NEEDS_REVIEW",
+      "tm50_weeks_pma": 36.8,
+      "hill": 11.5,
+      "action": "do_not_add",
+      "pmid": "31472084",
+      "doi": "10.1111/pan.13731",
+      "citation": "Anderson BJ, Hannam JA. Paediatr Anaesth. 2019;29:1100-1106.",
+      "equation_matches_engine": true,
+      "units": "weeks PMA as published",
+      "evidence": "Opened PubMed 31472084 abstract: 'Clearance maturation, standardized to a 70 kg person was described using the Hill equation. ... The maturation half-time was 36.8 (CV 9.2%, 95%CI 34.7, 40.9) weeks postmenstrual age and the Hill coefficient 11.5 (95%CI 8.1, 15).' Paper exists. Drug-level ibuprofen CL (CYP2C9-predominant mixed, genotype-sensitive), not an isoform curve. Do not treat as cyp2c9.",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/31472084/",
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "cyp2d6",
+      "verdict": "NEEDS_REVIEW",
+      "tm50_weeks_pma": 39.8,
+      "hill": 9.0,
+      "action": "do_not_add",
+      "pmid": "25258277",
+      "doi": "10.1007/s40262-014-0191-9",
+      "citation": "Allegaert K, Holford N, Anderson BJ et al. Clin Pharmacokinet. 2015;54:167-178 (TM50). Hill printed in Healy et al. Br J Clin Pharmacol. 2025;91:283-296, Table 5, fixed from Allegaert.",
+      "equation_matches_engine": true,
+      "units": "weeks PMA",
+      "evidence": "Opened PubMed 25258277 abstract: 'A sigmoid maturation model was used... CLPM (TM50 39.8 weeks) and CLPO (TM50 39.1 weeks) displayed fast maturation' — Hill not in the abstract. Allegaert full text was not opened (Springer paywall). Opened PMC11773095 Healy 2024 Table 5 (values fixed from Allegaert): TM50 CLPM 39.8 weeks PMA, Hill coefficient CLPM 9; TM50 CLPO 39.1, Hill 6.76. Engine pair 40.0 / 1.0 is not printed. Genotype (PM/IM/EM/UM) dominates adult CYP2D6. Not promoted to ACCEPT because the primary full text was not opened.",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/25258277/",
+      "secondary_url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11773095/",
+      "current_engine": {"tm50_weeks": 40.0, "hill": 1.0},
+      "paper_exists": true
+    },
+    {
+      "proposed_key": "cyp1a2",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": null,
+      "hill": null,
+      "action": "do_not_keep_unsourced",
+      "pmid": null,
+      "evidence": "Opened constants.py: labelled approximate TM50 ~1 yr PNA as PMA, Hill 1.5. No opened page printed both TM50 and Hill for CYP1A2. Salem 2014 (PMID 24671884, cited in opened Cristea refs) is a non-monotonic rise-then-fall function, not the engine Hill. Upreti 2016 PMID 26139104 abstract opened; Age50/Hill table paywalled — not accepted from memory. Engine 94.0 / 1.5 is unsourced.",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/26139104/",
+      "current_engine": {"tm50_weeks": 94.0, "hill": 1.5},
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "cyp2c9",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": null,
+      "hill": null,
+      "action": "do_not_keep_unsourced",
+      "pmid": null,
+      "evidence": "Opened constants.py comment is 'Anderson–Holford style' only. No opened page printed TM50 50 and Hill 1.5 for CYP2C9. Opened ibuprofen paper is 36.8 / 11.5 and is mixed drug CL, not isoform ontogeny. Engine 50.0 / 1.5 unsourced.",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/31472084/",
+      "current_engine": {"tm50_weeks": 50.0, "hill": 1.5},
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "cyp2c19",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": null,
+      "hill": null,
+      "action": "do_not_keep_unsourced",
+      "pmid": null,
+      "evidence": "Opened constants.py: Anderson–Holford style; genotype dominates. No opened page printed both TM50 and Hill for CYP2C19. Extract notes Holford 2013 compilation lists pantoprazole 47.99 / 1.48 as a drug row, not an isoform paper opened here. Engine 44.0 / 1.5 unsourced.",
+      "url_opened": null,
+      "current_engine": {"tm50_weeks": 44.0, "hill": 1.5},
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "ugt1a1",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": null,
+      "hill": null,
+      "action": "do_not_keep_unsourced",
+      "pmid": null,
+      "evidence": "Opened constants.py: 'approximate TM50/Hill'. Opened Anderson DMPK 2009 paracetamol 52.2 / 3.43 is mixed UGT1A1/1A6/1A9 + SULT — extract correctly refuses to relabel it ugt1a1. No opened page printed 70.0 / 1.8. Farhan 2024 PMID 38898531 not opened with numbers.",
+      "url_opened": "https://www.jstage.jst.go.jp/article/dmpk/24/1/24_1_25/_pdf",
+      "current_engine": {"tm50_weeks": 70.0, "hill": 1.8},
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "cyp2b6",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": null,
+      "hill": null,
+      "action": "do_not_add",
+      "pmid": null,
+      "evidence": "Additional PubMed/PMC/Firecrawl search. No opened source printed both TM50 and Hill for CYP2B6. Upreti 2016 table unread.",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/26139104/",
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "ces1",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": null,
+      "hill": null,
+      "action": "do_not_add",
+      "pmid": null,
+      "evidence": "Additional search. No opened page printed TM50+Hill for CES1 or plasma esterases. Oseltamivir-carboxylate renal-CL hits are not CES1 hydrolysis and were not opened as a Hill table.",
+      "url_opened": null,
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "cyp3a4_engine_55.4_1.83",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": 55.4,
+      "hill": 1.83,
+      "action": "replace_with_73.6_3.0",
+      "pmid": null,
+      "evidence": "Extract reject is fair. Opened Anderson & Larsson 2011 prints 73.6 / 3, not 55.4 / 1.83. Search for the pair '55.4' AND '1.83' with CYP3A4/midazolam found no matching page. 55.4 weeks is close to morphine CLmat50 (54.2).",
+      "url_opened": "https://pubmed.ncbi.nlm.nih.gov/20704661/",
+      "reject_reason_fair": true
+    },
+    {
+      "proposed_key": "ugt2b7_engine_88.3_1.90",
+      "verdict": "REJECT",
+      "tm50_weeks_pma": 88.3,
+      "hill": 1.9,
+      "action": "replace_with_54.2_3.92",
+      "pmid": null,
+      "evidence": "Extract reject is fair. Opened Anand Table 1 is 54.2 / 3.92. No opened paper prints 88.3 weeks and Hill 1.90 for morphine/UGT2B7 CL. Anand Tvol = 88.8 days (volume maturation half-life).",
+      "url_opened": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2733178/",
+      "reject_reason_fair": true
+    }
+  ],
+  "rejected_pathways_review": [
+    {
+      "pathway": "cyp3a4 (engine 55.4 / 1.83)",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. Opened primary midazolam Hill paper is 73.6 / 3."
+    },
+    {
+      "pathway": "ugt2b7 (engine 88.3 / 1.90)",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. Opened Anand Table 1 is 54.2 / 3.92."
+    },
+    {
+      "pathway": "cyp1a2 (engine 94.0 / 1.5)",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. No opened TM50+Hill pair."
+    },
+    {
+      "pathway": "cyp2d6 (engine 40.0 / 1.0)",
+      "reject_reason_fair": true,
+      "comment": "Fair for the engine pair. Allegaert TM50 39.8 opened on abstract; Hill 9 only on Healy Table 5 quoting Allegaert. Engine Hill 1.0 is unsourced. Not added as a new ACCEPT."
+    },
+    {
+      "pathway": "cyp2c9 (engine 50.0 / 1.5)",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. Ibuprofen 36.8 / 11.5 is not CYP2C9 isoform ontogeny."
+    },
+    {
+      "pathway": "cyp2c19 (engine 44.0 / 1.5)",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. No opened isoform TM50+Hill."
+    },
+    {
+      "pathway": "ugt1a1 (engine 70.0 / 1.8)",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. Paracetamol 52.2 / 3.43 must not be relabelled UGT1A1."
+    },
+    {
+      "pathway": "cyp2b6 / ces1 / remaining extract rejects",
+      "reject_reason_fair": true,
+      "comment": "Confirmed. No opened primary printed both TM50 and Hill. Upreti 2016 table unread."
+    }
+  ],
+  "summary": {
+    "accept": 3,
+    "reject": 8,
+    "needs_review": 5
+  }
+}

@@ -16,6 +16,8 @@ import os
 from anthropic import Anthropic
 
 import retrieval
+from engine.formulation import attach_administration
+from engine.pk_cache import CACHE as PK_CACHE
 from engine.pk_engine import (
     compute_pediatric_dose,
     estimate_gfr_bedside_schwartz,
@@ -33,7 +35,8 @@ Decision support for a clinician — NOT a prescriber.
 Pipeline (lean):
 1. load_skill('mechanism') if needed → map elimination / fm / target_metric / mechanism fields.
    Empty lists for absent transporters/metabolites. Cite-or-abstain.
-2. retrieve_drug_data FIRST — only PK source (live or shared cache). Null/unavailable → grade D, no invented numbers.
+2. retrieve_drug_data FIRST — only PK source (live or shared cache). Skip this call if the
+   user message already includes a cached dossier with CL+Vd. Null/unavailable → grade D, no invented numbers.
 3. CONTRAINDICATIONS (before or with dosing): from the label/dossier + clinical knowledge, list
    situations where this drug should be AVOIDED in contraindications_avoid (allergy/class
    cross-reactivity, absolute contraindications, major condition warnings). Compare to case
@@ -462,7 +465,6 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
         "Dose this case. Follow your pipeline and finish with submit_recommendation.\n\n"
         f"Case: {json.dumps(case)}"
     )
-    messages = [{"role": "user", "content": user_msg}]
     trace: list[str] = []
     in_tok = out_tok = cache_read = cache_write = 0
     retr_in = retr_out = 0
@@ -474,6 +476,23 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
         "last_dossier": None,
         "last_compute_renal_frac": case.get("renal_function_fraction"),
     }
+    # Prefetch shared PK cache so a repeat drug skips the retrieval subagent.
+    cached = PK_CACHE.get(case.get("drug") or "", case.get("indication"))
+    cached_dossier = (cached or {}).get("dossier") if cached else None
+    if cached_dossier and _dossier_core_pk_ok(cached_dossier):
+        state["pk_ok"] = True
+        state["pk_block_reason"] = None
+        state["last_dossier"] = cached_dossier
+        user_msg += (
+            "\n\nPK dossier already retrieved (source_mode=cache). "
+            "Do NOT call retrieve_drug_data unless this dossier is missing CL or Vd. "
+            "Use it for compute_pediatric_dose.\n"
+            + json.dumps(cached_dossier, default=str)[:4000]
+        )
+        if on_step:
+            on_step("pk_cache hit — skipped live retrieval")
+        trace.append("pk_cache hit — skipped live retrieval")
+    messages = [{"role": "user", "content": user_msg}]
     local_tools = {
         "compute_pediatric_dose": _build_compute(case, state),
         "load_skill": lambda a: load_skill(a.get("name", "")),
@@ -558,6 +577,7 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                 _apply_organ_function_flags(
                     rec, case, applied_renal_frac=state.get("last_compute_renal_frac"),
                 )
+                attach_administration(rec, case)
                 return {
                     "recommendation": rec,
                     "trace": trace,
@@ -571,12 +591,17 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                 }
             if tu.name == "retrieve_drug_data":
                 if on_step:
-                    on_step(f"→ retrieve_drug_data({tu.input.get('drug')}) — live PubMed/openFDA …")
+                    on_step(f"→ retrieve_drug_data({tu.input.get('drug')}) …")
                 rout = retrieval.fetch(tu.input["drug"], tu.input.get("indication"))
                 retr_in += rout["usage"].get("input_tokens", 0)
                 retr_out += rout["usage"].get("output_tokens", 0)
                 dossier = rout.get("dossier") or {}
                 mode = rout.get("source_mode") or "unavailable"
+                if on_step:
+                    if mode == "cache":
+                        on_step("→ pk_cache hit — skipped live PubMed/openFDA")
+                    elif mode == "live":
+                        on_step("→ retrieve_drug_data — live PubMed/openFDA")
                 # Latch retrieval outcome — product path never invents PK after fail/null.
                 if mode == "unavailable" or not _dossier_core_pk_ok(dossier):
                     state["pk_ok"] = False

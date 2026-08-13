@@ -2,7 +2,7 @@
 
 Map drug → engine `fm` keys only when a maturation curve exists.
 
-**Keys:** `renal_gfr`, `cyp3a4`, `ugt2b7`, `cyp1a2`, `cyp2d6`, `cyp2c9`, `cyp2c19`, `ugt1a1`.
+**Keys:** `renal_gfr`, `cyp3a4`, `ugt2b7` only — each has a published TM50/Hill (Rhodin 2009; Anderson/Larsson 2011; Anand 2008). Do not map to CYP1A2/2D6/2C9/2C19/UGT1A1; those curves were removed (no opened Hill pair).
 
 **Rules**
 - `fm` fractions ≈ 1.0 for the cleared share; unmapped fraction → leave out (engine flags it).

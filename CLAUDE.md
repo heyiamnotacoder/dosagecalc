@@ -66,8 +66,8 @@ MF(PMA)  = PMA^H / (TM50^H + PMA^H)      # normalised so adult ≈ 1
 - The engine **refuses to invent a maturation curve** for an unknown pathway (raises) and
   **flags** unattributed clearance rather than hiding it. This is cite-or-abstain in code.
 
-Known pathway keys: `renal_gfr`, `cyp3a4`, `ugt2b7`, `cyp1a2`, `cyp2d6`, `cyp2c9`,
-`cyp2c19`, `ugt1a1`. Extend MATURATION only with **published** TM50/Hill — never invent.
+Known pathway keys: `renal_gfr` (Rhodin 2009), `cyp3a4` (Anderson/Larsson 2011 midazolam),
+`ugt2b7` (Anand 2008 morphine). Extend MATURATION only with **published** TM50/Hill — never invent.
 
 **Skills:** lean files in `backend/skills/` loaded via `load_skill` — keep agent SYSTEM short.
 **Edge cases:** `assess_edge_cases` flags prodrug/obesity/high-PB/illness when evidence exists.

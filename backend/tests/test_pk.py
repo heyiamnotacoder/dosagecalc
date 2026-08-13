@@ -75,17 +75,25 @@ def test_refuses_unknown_pathway():
     raise AssertionError("should have refused unknown pathway")
 
 
-def test_new_pathways_accepted():
-    """Expanded MATURATION keys must be callable (cyp1a2, cyp2d6, …)."""
+def test_only_published_pathways():
+    """MATURATION holds only opened Hill+TM50 primaries — no approximate extras."""
     from engine.constants import MATURATION
-    for key in ("cyp1a2", "cyp2d6", "cyp2c9", "cyp2c19", "ugt1a1"):
-        assert key in MATURATION, key
+    assert set(MATURATION) == {"renal_gfr", "cyp3a4", "ugt2b7"}
+    assert MATURATION["renal_gfr"]["tm50_weeks"] == 47.7
+    assert MATURATION["renal_gfr"]["hill"] == 3.40
+    assert MATURATION["cyp3a4"]["tm50_weeks"] == 73.6
+    assert MATURATION["cyp3a4"]["hill"] == 3.0
+    assert MATURATION["ugt2b7"]["tm50_weeks"] == 54.2
+    assert MATURATION["ugt2b7"]["hill"] == 3.92
+    for key, params in MATURATION.items():
+        assert "PMID" in params["source"], key
+        assert "approx" not in params["source"].lower()
         r = compute_pediatric_dose(
             drug="probe", weight_kg=10, cl_adult_l_h=20, vd_adult_l=50,
             fm={key: 1.0}, age_years=1, adult_dose_mg_per_day=100,
         )
         assert r.cl_child_l_h > 0 and r.pathways[0].pathway == key
-    print(f"  new pathways accepted: cyp1a2/2d6/2c9/2c19, ugt1a1  OK")
+    print("  published pathways only: renal_gfr / cyp3a4 / ugt2b7  OK")
 
 
 def test_pk_cache():
@@ -98,6 +106,9 @@ def test_pk_cache():
     assert c.set("gentamicin", "sepsis", d, "live")
     hit = c.get("gentamicin", "sepsis")
     assert hit and hit["dossier"]["cl_adult_l_h"] == 5.0
+    # indication is not part of the key — same drug, other indication, still hits
+    assert c.get("gentamicin", "meningitis")["dossier"]["cl_adult_l_h"] == 5.0
+    assert c.get("gentamicin", None)["dossier"]["cl_adult_l_h"] == 5.0
     assert c.set("vanco", None, d, "live")
     assert c.set("amikacin", None, d, "live")  # evicts oldest
     assert c.get("gentamicin", "sepsis") is None  # LRU evicted
@@ -389,6 +400,64 @@ def test_mechanism_scorer():
     print("  mechanism scorer: perfect=1.0, invented-enzyme miss caught  OK")
 
 
+def test_formulation_rounding():
+    from engine.formulation import (
+        attach_administration,
+        build_administration,
+        increment_mg,
+        parse_doses_per_day,
+        round_to_increment,
+    )
+
+    assert increment_mg(0.4) == 0.05
+    assert increment_mg(3) == 0.1
+    assert increment_mg(12) == 0.5
+    assert increment_mg(47) == 1.0
+    assert increment_mg(220) == 5.0
+    assert increment_mg(800) == 10.0
+    assert round_to_increment(47.32, 1.0) == 47.0
+
+    assert parse_doses_per_day("q8h") == 3.0
+    assert parse_doses_per_day("every 8 hours") == 3.0
+    assert parse_doses_per_day("BID") == 2.0
+    assert parse_doses_per_day(None, suggested_interval_h=12) == 2.0
+    assert parse_doses_per_day("as directed") is None
+
+    admin = build_administration(
+        dose_mg_per_day=47.32, weight_kg=20, interval="q8h", formulation_mg_per_ml=5.0,
+    )
+    assert admin is not None
+    assert admin["doses_per_day"] == 3.0
+    assert admin["rounded_dose_mg_per_dose"] is not None
+    assert admin["volume_ml_per_dose"] == round(admin["rounded_dose_mg_per_dose"] / 5.0, 3)
+    assert admin["formulation_mg_per_ml"] == 5.0
+    assert admin["flag"] is None
+
+    tiny = build_administration(dose_mg_per_day=0.37, weight_kg=3.5, interval=None)
+    assert tiny is not None
+    assert tiny["increment_mg"] == 0.05
+
+    rec = {
+        "final_dose_mg_per_day": 47.32,
+        "final_dose_mg_per_kg_per_day": 2.366,
+        "interval": "q8h",
+        "flags": [],
+        "blocked": False,
+    }
+    attach_administration(rec, {"weight_kg": 20, "formulation_mg_per_ml": 5})
+    assert rec["administration"]["rounded_dose_mg_per_day"] is not None
+    assert rec["final_dose_mg_per_day"] == 47.32  # engine number unchanged
+
+    blocked = {"final_dose_mg_per_day": 10, "blocked": True, "flags": []}
+    attach_administration(blocked, {"weight_kg": 20})
+    assert blocked["administration"] is None
+
+    null_dose = {"final_dose_mg_per_day": None, "blocked": False, "flags": []}
+    attach_administration(null_dose, {"weight_kg": 20})
+    assert null_dose["administration"] is None
+    print("  formulation rounding + attach_administration  OK")
+
+
 def test_child_pugh():
     """Child-Pugh class from labs: normal → A; high scores → C; resolve prefers calc."""
     from engine.child_pugh import compute_child_pugh, resolve_child_pugh, allergy_tokens_overlap
@@ -474,7 +543,7 @@ if __name__ == "__main__":
     test_maturation_monotonic()
     test_neonate_clears_below_linear()
     test_refuses_unknown_pathway()
-    test_new_pathways_accepted()
+    test_only_published_pathways()
     test_edge_cases()
     test_pk_cache()
     test_oral_bioavailability()
@@ -487,6 +556,7 @@ if __name__ == "__main__":
     test_compute_forces_dossier_f_and_toxic()
     test_allergy_normalize_hint()
     test_mechanism_scorer()
+    test_formulation_rounding()
     test_child_pugh()
     concordance_check()
     print("\nAll structural tests passed.")

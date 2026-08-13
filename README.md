@@ -92,37 +92,9 @@ safety warning.
 Concordance = the recommended dose ÷ a guideline dose, reported as a ratio inside a **strict 0.67×–1.5×**
 band (and a **wider clinical 0.5×–2×** band).
 
-## Validation
-
-The **full live agent** was run across **60 scenarios** — all 20 drugs × 3 clinical cases
-(term neonate · renal-flagged 2-year-old · obese 1-year-old) — each dose scored against a hand-anchored
-pediatric guideline:
-
-| Metric | Result |
-|--------|-------:|
-| Within the **clinical 0.5×–2× band** (of dosed cases) | **51 / 53 · 96%** |
-| Within the **strict 0.67×–1.5× band** (of dosed cases) | **32 / 53 · 60%** |
-| Graded **A or B** | **49 / 60 · 82%** |
-| Grade distribution | **A 3 · B 46 · C 7 · D 4** |
-
-By elimination pathway (dosed cases):
-
-| Pathway | Strict 0.67–1.5× | Clinical 0.5–2× |
-|---------|------------------|-----------------|
-| Hepatic — CYP | 16 / 23 · 70% | 22 / 23 · 96% |
-| Renal — GFR | 15 / 27 · 56% | 26 / 27 · 96% |
-| Glucuronidation — UGT | 1 / 3 · 33% | 3 / 3 · 100% |
-
-**What the numbers say:** on the clinical band the agent lands a defensible starting dose ~96% of the time.
-The moderate strict band is **not broken arithmetic** — it's dominated by *intentional* guideline overrides
-(aminoglycoside Cmax under-prediction, β-lactam time>MIC daily-dose proxy, Michaelis–Menten phenytoin) that
-the agent **flags and self-reports** rather than hides. The dominant grade **B** is the system correctly
-refusing false certainty.
-
-The deterministic engine underneath is separately unit-tested and **reproducible with no API key**
-(`python3 -m tests.test_pk`): **7/8** seeded archetypes within the strict band and **11/11** structural &
-safety tests pass (maturation monotonicity, cite-or-abstain, safety hard-stops, oral-F, time>MIC, LRU cache,
-mechanism scorer).
+The deterministic engine is unit-tested and **reproducible with no API key**
+(`python3 -m tests.test_pk`): maturation monotonicity, cite-or-abstain, safety hard-stops, oral-F,
+time>MIC, LRU cache, and the mechanism scorer.
 
 ## Architecture
 

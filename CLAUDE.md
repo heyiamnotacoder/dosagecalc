@@ -7,8 +7,8 @@ cited, auditable rationale. **Decision support, not prescribing.**
 
 ## RULES:
 1. If you want to check a generated or local site, use the `playwright-web-check` skill (global Playwright).
-4. Root `validation_set/` and `result*.md` are harness-only oracles. Backend product code must
-   never import, open, or mention `validation_set`.
+4. Do not re-add `validation_set/` or `result*.md`. They are completed harness artifacts
+   (gitignored). Backend product code must never import, open, or mention `validation_set`.
 5. Before making changes to any branches ask user which branch would be suited for changes.
 
 ## Core thesis
@@ -100,7 +100,7 @@ Grades: **A** passes concordance vs a real guideline · **B** solid PK, no guide
 - **PMA for under-2s.** If unknown, assume term AND surface that assumption.
 - **Safety bounds.** Never present a dose above toxic / below effective without a prominent flag.
 - **NTI drugs (vancomycin, aminoglycosides) recommend TDM**; **active metabolites (M6G) flagged.**
-- **Known engine limits** (validation `result_eval.md` on `validation-eval`; engine kept as-is):
+- **Known engine limits** (engine kept as-is):
   - allometry×Cmax **underdoses concentration-dependent aminoglycosides** — agent must
     guideline-anchor + flag exposure-target mismatch + TDM (verified gentamicin/amikacin).
   - **time_mic** daily-dose match is a **proxy** for fT>MIC — grade ceiling B; interval/infusion matters.
@@ -108,8 +108,8 @@ Grades: **A** passes concordance vs a real guideline · **B** solid PK, no guide
   - **Titration** drugs without adult mg/day (midazolam/fentanyl): no false absolute dose.
   - Pediatric CL may exceed adult allometry for some drugs (e.g. fluconazole) — flag discordance.
   - Obesity: flag only; do not silently rewrite weight in the engine.
-- **Validation branch:** `validation-eval` + `validation_set/` + `result_eval.md` / `results.csv`
-  are harness-only — **never merge that branch to master**; product path never imports them.
+- **Validation harness** (`validation_set/`, `result*.md`, `results.csv`) is completed and
+  removed from the product tree — do not re-add; product path never imports them.
 
 ## Run
 ```bash

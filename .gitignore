@@ -9,3 +9,10 @@ judge_feedback.md
 PRD.md
 concept.html
 demo video/
+
+# Completed validation/result artifacts — do not commit
+/result.md
+/result_*.md
+/result_eval.md
+/eval.md
+/validation_set/

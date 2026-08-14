@@ -131,3 +131,17 @@ subagent + orchestrator + guideline search). The <60 s target is the tuning goal
 ## Budget / scope
 Target < $1 and < 60 s per query. Default model `claude-opus-4-8` (override via
 `ORCHESTRATOR_MODEL`; `claude-sonnet-5` is the cheaper option). 
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in heyiamnotacoder/dosagecalc GitHub Issues (gh CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default roles: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: CONTEXT.md + docs/adr/ at the repo root. See `docs/agents/domain.md`.

@@ -319,6 +319,25 @@ def _build_compute(case: dict, state: dict):
                       "oral_bioavailability"):
                 if k in dossier and dossier[k] is not None:
                     merged[k] = dossier[k]
+            # Single HI resolver for both facades — never invent an organ-function fraction.
+            if case.get("hepatic_impairment") and dossier.get("hi_table") and case.get("child_pugh"):
+                from engine.hi_table import apply_hi_resolution
+                hi = apply_hi_resolution(case, dossier.get("hi_table"))
+                state["last_hi_resolution"] = hi
+                if hi.get("status") == "ok" and hi.get("kind") == "contraindicated":
+                    reason = (
+                        "SAFETY STOP — label contraindicated in this hepatic-impairment class "
+                        f"(Child-Pugh {case.get('child_pugh')})."
+                    )
+                    state["blocked_reason"] = reason
+                    return {
+                        "blocked": True,
+                        "block_reason": reason,
+                        "recommended_dose_mg_per_day": None,
+                        "recommended_dose_mg_per_kg_per_day": None,
+                    }
+                if hi.get("status") == "ok" and hi.get("adult_dose_mg_per_day") is not None:
+                    merged["adult_dose_mg_per_day"] = hi["adult_dose_mg_per_day"]
             # Oral + unknown F: pass None so the engine hard-stops (do not invent F=1.0).
             route = (merged.get("route") or case.get("route") or "iv").lower()
             if route == "oral" and "oral_bioavailability" not in merged:

@@ -57,6 +57,10 @@ DOSSIER_TOOL = {
                 "items": {"type": "object",
                           "properties": {"claim": {"type": "string"}, "source": {"type": "string"}}},
             },
+            "hi_table": {
+                "type": ["object", "null"],
+                "description": "Cited per-class HI dosing table (filled by live extract, not invented)",
+            },
             "confidence": {"type": "string", "description": "brief note on data quality / gaps"},
         },
         "required": ["fm", "elimination", "enzymes", "transporters", "active_metabolites",
@@ -81,7 +85,6 @@ TOOLS = [
     DOSSIER_TOOL,
 ]
 
-
 def _abstention(reason: str) -> dict:
     return {
         "cl_adult_l_h": None, "vd_adult_l": None, "fm": {}, "target_metric": "css",
@@ -89,8 +92,22 @@ def _abstention(reason: str) -> dict:
         "elimination": "mixed", "enzymes": [], "transporters": [], "active_metabolites": [],
         "protein_binding_percent": None, "toxic_dose_mg_per_kg_per_day": None,
         "effective_dose_mg_per_kg_per_day": None, "citations": [],
+        "hi_table": None,
         "confidence": f"RETRIEVAL UNAVAILABLE ({reason}) — no values retrieved; abstain, do not dose.",
     }
+
+
+def _attach_live_hi_table(dossier: dict, label: dict, drug: str, indication: str | None) -> dict:
+    """Deterministic live extract — one parser, never a second HI table.
+
+    Always write the live result (including None) so a model-invented
+    submit_dossier.hi_table cannot be cached as a citation.
+    """
+    from engine.hi_table import maybe_extract_hi_table
+
+    dossier = dict(dossier)
+    dossier["hi_table"] = maybe_extract_hi_table(label, drug=drug, indication=indication)
+    return dossier
 
 
 def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5,
@@ -143,9 +160,10 @@ def fetch(drug: str, indication: str | None = None, *, max_turns: int = 5,
 
             for tu in tool_uses:
                 if tu.name == "submit_dossier" and tu.input:
+                    dossier = _attach_live_hi_table(tu.input, label, drug, indication)
                     if use_cache:
-                        PK_CACHE.set(drug, indication, tu.input, source_mode="live")
-                    return {"dossier": tu.input, "source_mode": "live",
+                        PK_CACHE.set(drug, indication, dossier, source_mode="live")
+                    return {"dossier": dossier, "source_mode": "live",
                             "trace": trace, "usage": usage}
 
             if resp.stop_reason != "tool_use":

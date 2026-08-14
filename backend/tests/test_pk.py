@@ -558,5 +558,36 @@ if __name__ == "__main__":
     test_mechanism_scorer()
     test_formulation_rounding()
     test_child_pugh()
+    from tests.test_hi_table import (
+        test_extract_fills_per_class_contract_with_excerpt_and_citation,
+        test_caution_only_or_missing_excerpt_is_not_a_citation,
+        test_mild_moderate_severe_maps_to_abc_and_is_flagged,
+        test_no_adjustment_necessary_is_fold_one,
+        test_missing_a_is_fold_one_missing_b_uses_c_else_abstain,
+        test_missing_c_uses_moderate_else_abstain,
+        test_user_adult_dose_overrides_label_fold_only_without_dose_abstains,
+        test_indication_stratified_rows_must_match_or_abstain,
+        test_resolver_is_single_implementation,
+        test_live_extract_from_openfda_style_label,
+        test_non_hepatic_severity_is_not_a_citation,
+        test_both_facades_share_resolve_hi_dose,
+        test_retrieval_attaches_live_hi_table,
+        test_compute_uses_shared_hi_resolver,
+    )
+    print("HI table extract + resolve (issue #3):")
+    test_extract_fills_per_class_contract_with_excerpt_and_citation()
+    test_caution_only_or_missing_excerpt_is_not_a_citation()
+    test_mild_moderate_severe_maps_to_abc_and_is_flagged()
+    test_no_adjustment_necessary_is_fold_one()
+    test_missing_a_is_fold_one_missing_b_uses_c_else_abstain()
+    test_missing_c_uses_moderate_else_abstain()
+    test_user_adult_dose_overrides_label_fold_only_without_dose_abstains()
+    test_indication_stratified_rows_must_match_or_abstain()
+    test_resolver_is_single_implementation()
+    test_live_extract_from_openfda_style_label()
+    test_non_hepatic_severity_is_not_a_citation()
+    test_both_facades_share_resolve_hi_dose()
+    test_retrieval_attaches_live_hi_table()
+    test_compute_uses_shared_hi_resolver()
     concordance_check()
     print("\nAll structural tests passed.")

@@ -81,6 +81,7 @@ def pubmed_fetch(pmids: list[str] | str, max_chars: int = 6000) -> dict:
 _LABEL_FIELDS = [
     "indications_and_usage", "dosage_and_administration", "clinical_pharmacology",
     "pharmacokinetics", "warnings", "warnings_and_cautions", "boxed_warning",
+    "use_in_specific_populations",
 ]
 
 

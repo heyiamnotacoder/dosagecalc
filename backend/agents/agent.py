@@ -50,6 +50,8 @@ Pipeline (lean):
    rewrites the adult reference dose from the cited table, then allometry — do not invent an
    OF. No cited applicable row → blocked/abstain, grade D. Adult HI label × allometry is
    grade ceiling B; renal+HI stacked is ceiling C.
+   Adult HI calculator (calculator_mode=adult_hi) is NOT this pipeline: it is a deterministic
+   cited-label lookup with no allometry, no maturation, and no A–D grade.
    Pass oral_bioavailability from the dossier; if a route is clinically non-viable (e.g. an oral
    route for a drug not systemically absorbed orally, F=0), pass routes_allowed (e.g. ["iv"]).
    If compute returns blocked=true the case is NOT prescribable: submit_recommendation with
@@ -260,6 +262,114 @@ def _force_safety_block(rec: dict, reason: str, *, flag_token: str = "SAFETY STO
     rec["flags"] = flags
 
 
+def _adult_hi_compute_payload(adult_hi: dict, case: dict) -> dict:
+    """Tool-return for adult HI: label dose, never pathways / allometry."""
+    blocked = bool(adult_hi.get("blocked"))
+    dose = adult_hi.get("adult_dose_mg_per_day")
+    dpk = None
+    wt = case.get("weight_kg")
+    if not blocked and dose is not None and wt not in (None, ""):
+        try:
+            dpk = round(float(dose) / float(wt), 3)
+        except (TypeError, ValueError, ZeroDivisionError):
+            dpk = None
+    payload = {
+        "blocked": blocked,
+        "block_reason": adult_hi.get("block_reason"),
+        "recommended_dose_mg_per_day": (
+            None if blocked or dose is None else round(float(dose), 2)
+        ),
+        "recommended_dose_mg_per_kg_per_day": None if blocked else dpk,
+        "hi_outcome": adult_hi.get("outcome"),
+        "hi_outcome_label": adult_hi.get("outcome_label"),
+        "allometry_applied": False,
+        "grade": None,
+    }
+    if blocked:
+        payload["recommended_dose_mg_per_day"] = None
+        payload["recommended_dose_mg_per_kg_per_day"] = None
+    return payload
+
+
+def _load_adult_hi_dossier(case: dict, on_step=None) -> tuple[dict, str, dict]:
+    """Cited HI table for adult facade: cache hi_table, else live openFDA extract.
+
+    Does not write a PK-null dossier into the cache (would poison pediatric runs).
+    """
+    drug = case.get("drug") or ""
+    indication = case.get("indication")
+    usage = {"input_tokens": 0, "output_tokens": 0, "cache_hit": False, "model": None}
+    cached = PK_CACHE.get(drug, indication)
+    cached_dossier = (cached or {}).get("dossier") if cached else None
+    if cached_dossier:
+        usage["cache_hit"] = True
+        if on_step:
+            on_step("pk_cache hit — reused cited HI table")
+        return cached_dossier, "cache", usage
+    if on_step:
+        on_step("→ retrieve_drug_data — openFDA label lookup (adult HI, no allometry)")
+    from engine.hi_table import maybe_extract_hi_table
+    from retrieval.retrieval_tools import openfda_label
+
+    label = openfda_label(drug, max_field_chars=8000)
+    table = maybe_extract_hi_table(
+        label if label.get("found") else {},
+        drug=drug,
+        indication=indication,
+    )
+    typical = (table or {}).get("typical_adult_dose_mg_per_day")
+    dossier = {
+        "hi_table": table,
+        "hi_table_pediatric": None,
+        "typical_adult_dose_mg_per_day": typical,
+        "oral_bioavailability": None,
+        "citations": (
+            [{"claim": "openFDA hepatic-impairment dosing", "source": table["citation"]}]
+            if table and table.get("citation") else []
+        ),
+    }
+    mode = "openfda" if label.get("found") else "unavailable"
+    return dossier, mode, usage
+
+
+def _run_adult_hi_case(case: dict, on_step=None) -> dict:
+    """Product path for Adult HI calculator: label lookup, no orchestrator, no A–D."""
+    from engine.adult_hi import (
+        merge_adult_hi_into_recommendation,
+        recommendation_from_adult_hi,
+        run_adult_hi_facade,
+    )
+    from engine.formulation import attach_administration
+
+    trace: list[str] = []
+    dossier, source_mode, usage = _load_adult_hi_dossier(case, on_step=on_step)
+    if on_step:
+        on_step("→ adult_hi_facade — cited label lookup, no allometry")
+    result = run_adult_hi_facade(case, dossier, route=case.get("route"))
+    rec = recommendation_from_adult_hi(case, result, dossier)
+    _apply_organ_function_flags(rec, case, applied_renal_frac=None)
+    merge_adult_hi_into_recommendation(rec, result)
+    attach_administration(rec, case)
+    if on_step:
+        label = rec.get("hi_outcome_label") or rec.get("hi_outcome") or "done"
+        on_step(f"→ adult HI outcome: {label}")
+    return {
+        "recommendation": rec,
+        "trace": trace,
+        "usage": {
+            "input_tokens": usage.get("input_tokens") or 0,
+            "output_tokens": usage.get("output_tokens") or 0,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0,
+            "retrieval_input_tokens": 0,
+            "retrieval_output_tokens": 0,
+            "retrieval_model": None,
+            "model": "adult_hi_facade",
+            "source_mode": source_mode,
+        },
+    }
+
+
 def _build_compute(case: dict, state: dict):
     """Return a compute_pediatric_dose tool handler closed over case + retrieval state.
 
@@ -268,21 +378,26 @@ def _build_compute(case: dict, state: dict):
     Dossier CL/Vd/fm/F/toxic/effective always win when present (not fill-if-omitted).
     """
     def _compute(args: dict) -> dict:
-        # Live-or-abstain: refuse compute without a successful retrieval of core PK.
-        # Recoverable — do NOT latch sticky blocked_reason (that is for real engine hard-stops).
-        if state.get("pk_block_reason") or not state.get("pk_ok"):
-            reason = state.get("pk_block_reason") or (
-                "SAFETY STOP — no cited adult PK retrieved; call retrieve_drug_data "
-                "successfully before compute (cite-or-abstain)."
-            )
-            return {
-                "error": reason,
-                "blocked": True,
-                "block_reason": reason,
-                "recommended_dose_mg_per_day": None,
-                "recommended_dose_mg_per_kg_per_day": None,
-            }
+        # Live-or-abstain: refuse pediatric compute without core PK. Adult HI is
+        # label lookup and does not need CL/Vd.
         try:
+            from engine.child_pugh import resolve_calculator_mode as _mode
+            try:
+                _facade = _mode(case)
+            except ValueError:
+                _facade = "pediatric"
+            if _facade != "adult_hi" and (state.get("pk_block_reason") or not state.get("pk_ok")):
+                reason = state.get("pk_block_reason") or (
+                    "SAFETY STOP — no cited adult PK retrieved; call retrieve_drug_data "
+                    "successfully before compute (cite-or-abstain)."
+                )
+                return {
+                    "error": reason,
+                    "blocked": True,
+                    "block_reason": reason,
+                    "recommended_dose_mg_per_day": None,
+                    "recommended_dose_mg_per_kg_per_day": None,
+                }
             # Keep explicit nulls for oral_bioavailability (unknown F must reach the engine).
             merged: dict = {}
             for k, v in (args or {}).items():
@@ -324,9 +439,24 @@ def _build_compute(case: dict, state: dict):
                 if k in dossier and dossier[k] is not None:
                     merged[k] = dossier[k]
             # Pediatric HI facade (#5): bake cited HI into adult dose, then allometry.
-            # hepatic_function_fraction stays 1.0. Adult HI interim rewrite until #6.
+            # Adult HI facade (#6): label lookup only — never call the engine.
             from engine.child_pugh import resolve_calculator_mode
+            from engine.adult_hi import run_adult_hi_facade
             from engine.pediatric_hi import run_pediatric_hi_facade
+
+            try:
+                mode = resolve_calculator_mode(case)
+            except ValueError:
+                mode = "pediatric"
+            if mode == "adult_hi":
+                adult_hi = run_adult_hi_facade(
+                    case,
+                    dossier,
+                    route=merged.get("route") or case.get("route"),
+                )
+                state["last_adult_hi"] = adult_hi
+                state["last_hi_resolution"] = adult_hi.get("resolution")
+                return _adult_hi_compute_payload(adult_hi, case)
 
             ped_hi = run_pediatric_hi_facade(
                 case,
@@ -351,34 +481,6 @@ def _build_compute(case: dict, state: dict):
                     }
                 if ped_hi.get("adult_dose_mg_per_day") is not None:
                     merged["adult_dose_mg_per_day"] = ped_hi["adult_dose_mg_per_day"]
-            else:
-                try:
-                    mode = resolve_calculator_mode(case)
-                except ValueError:
-                    mode = "pediatric"
-                if (
-                    mode == "adult_hi"
-                    and case.get("hepatic_impairment")
-                    and dossier.get("hi_table")
-                    and case.get("child_pugh")
-                ):
-                    from engine.hi_table import apply_hi_resolution
-                    hi = apply_hi_resolution(case, dossier.get("hi_table"))
-                    state["last_hi_resolution"] = hi
-                    if hi.get("status") == "ok" and hi.get("kind") == "contraindicated":
-                        reason = (
-                            "SAFETY STOP — label contraindicated in this hepatic-impairment class "
-                            f"(Child-Pugh {case.get('child_pugh')})."
-                        )
-                        state["blocked_reason"] = reason
-                        return {
-                            "blocked": True,
-                            "block_reason": reason,
-                            "recommended_dose_mg_per_day": None,
-                            "recommended_dose_mg_per_kg_per_day": None,
-                        }
-                    if hi.get("status") == "ok" and hi.get("adult_dose_mg_per_day") is not None:
-                        merged["adult_dose_mg_per_day"] = hi["adult_dose_mg_per_day"]
             # Oral + unknown F: pass None so the engine hard-stops (do not invent F=1.0).
             route = (merged.get("route") or case.get("route") or "iv").lower()
             if route == "oral" and "oral_bioavailability" not in merged:
@@ -535,13 +637,19 @@ def _apply_organ_function_flags(
 def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
     """Run one dosing case end-to-end."""
     case = _normalize_case(case)
-    from engine.child_pugh import hi_gate_error
+    from engine.child_pugh import hi_gate_error, resolve_calculator_mode
 
     gate = hi_gate_error(case)
     if gate:
         if on_step:
             on_step(gate)
         return {"error": gate, "recommendation": None}
+    try:
+        mode = resolve_calculator_mode(case)
+    except ValueError:
+        mode = "pediatric"
+    if mode == "adult_hi":
+        return _run_adult_hi_case(case, on_step=on_step)
     client = Anthropic()
     user_msg = (
         "Dose this case. Follow your pipeline and finish with submit_recommendation.\n\n"
@@ -619,8 +727,16 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
         for tu in tool_uses:
             if tu.name == "submit_recommendation":
                 rec = dict(tu.input) if tu.input else {}
-                # 1) PK cite-or-abstain: never allow a dose without successful retrieval.
-                if state.get("pk_block_reason") or not state.get("pk_ok"):
+                from engine.child_pugh import resolve_calculator_mode as _rmode_early
+                try:
+                    _facade_early = _rmode_early(case)
+                except ValueError:
+                    _facade_early = "pediatric"
+                # 1) PK cite-or-abstain: never allow a pediatric dose without retrieval.
+                # Adult HI is a label lookup and does not need CL/Vd.
+                if _facade_early != "adult_hi" and (
+                    state.get("pk_block_reason") or not state.get("pk_ok")
+                ):
                     reason = state.get("pk_block_reason") or (
                         "SAFETY STOP — adult PK was not retrieved (or was null); "
                         "abstain, do not invent numbers (grade D)."
@@ -659,24 +775,48 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                 _apply_organ_function_flags(
                     rec, case, applied_renal_frac=state.get("last_compute_renal_frac"),
                 )
+                from engine.adult_hi import (
+                    merge_adult_hi_into_recommendation,
+                    run_adult_hi_facade,
+                )
                 from engine.pediatric_hi import (
                     merge_pediatric_hi_into_recommendation,
                     run_pediatric_hi_facade,
                 )
-                ped_hi = state.get("last_pediatric_hi")
-                if ped_hi is None:
-                    dossier = state.get("last_dossier") or {}
-                    ped_hi = run_pediatric_hi_facade(
-                        case, dossier, fm=dossier.get("fm") or {},
-                    )
-                    state["last_pediatric_hi"] = ped_hi
-                if ped_hi.get("blocked"):
-                    _force_safety_block(
-                        rec,
-                        ped_hi.get("block_reason")
-                        or "SAFETY STOP — no cited applicable hepatic-impairment adjustment; abstain.",
-                    )
-                merge_pediatric_hi_into_recommendation(rec, ped_hi)
+                from engine.child_pugh import resolve_calculator_mode as _rmode
+                try:
+                    _facade = _rmode(case)
+                except ValueError:
+                    _facade = "pediatric"
+                if _facade == "adult_hi":
+                    adult_hi = state.get("last_adult_hi")
+                    if adult_hi is None:
+                        dossier = state.get("last_dossier") or {}
+                        adult_hi = run_adult_hi_facade(
+                            case, dossier, route=case.get("route"),
+                        )
+                        state["last_adult_hi"] = adult_hi
+                    if adult_hi.get("blocked"):
+                        rec["final_dose_mg_per_kg_per_day"] = None
+                        rec["final_dose_mg_per_day"] = None
+                        rec["blocked"] = True
+                        rec["block_reason"] = adult_hi.get("block_reason")
+                    merge_adult_hi_into_recommendation(rec, adult_hi)
+                else:
+                    ped_hi = state.get("last_pediatric_hi")
+                    if ped_hi is None:
+                        dossier = state.get("last_dossier") or {}
+                        ped_hi = run_pediatric_hi_facade(
+                            case, dossier, fm=dossier.get("fm") or {},
+                        )
+                        state["last_pediatric_hi"] = ped_hi
+                    if ped_hi.get("blocked"):
+                        _force_safety_block(
+                            rec,
+                            ped_hi.get("block_reason")
+                            or "SAFETY STOP — no cited applicable hepatic-impairment adjustment; abstain.",
+                        )
+                    merge_pediatric_hi_into_recommendation(rec, ped_hi)
                 attach_administration(rec, case)
                 return {
                     "recommendation": rec,

@@ -115,11 +115,16 @@ def health():
             "pk_cache": PK_CACHE.stats()}
 
 
+def _requires_anthropic(case: Case) -> bool:
+    """Adult HI is a deterministic openFDA label lookup — no orchestrator."""
+    return (case.calculator_mode or "pediatric") != "adult_hi"
+
+
 @app.post("/calculate")
 def calculate(case: Case):
-    """Full agentic pipeline — needs ANTHROPIC_API_KEY."""
+    """Full agentic pipeline — needs ANTHROPIC_API_KEY except Adult HI lookup."""
     _enforce_hi_gate(case)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    if _requires_anthropic(case) and not os.environ.get("ANTHROPIC_API_KEY"):
         raise HTTPException(400, "ANTHROPIC_API_KEY not set. Add it to backend/.env")
     result = run_case(case.model_dump())
     if result.get("recommendation") is None:
@@ -136,7 +141,7 @@ def calculate_stream(case: Case):
     The frontend reads this to drive the live loading screen.
     """
     _enforce_hi_gate(case)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    if _requires_anthropic(case) and not os.environ.get("ANTHROPIC_API_KEY"):
         raise HTTPException(400, "ANTHROPIC_API_KEY not set. Add it to backend/.env")
 
     q: queue.Queue = queue.Queue()

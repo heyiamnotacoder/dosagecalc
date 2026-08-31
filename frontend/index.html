@@ -471,6 +471,11 @@
   .grade.B{background:#E7EEF6;color:#2b5580}
   .grade.C{background:var(--amber-wash);color:var(--amber)}
   .grade.D{background:var(--red-wash);color:var(--red)}
+  .grade.outcome{font-size:.78rem;text-align:center;max-width:12.5rem;line-height:1.25;letter-spacing:0}
+  .grade.label_dose{background:var(--teal-wash);color:var(--teal-deep)}
+  .grade.no_labeled_adjustment{background:#E7EEF6;color:#2b5580}
+  .grade.contraindicated{background:var(--red-wash);color:var(--red)}
+  .grade.abstain{background:var(--amber-wash);color:var(--amber)}
   /* Grade A–D legend on hover/focus */
   .grade .tip{display:none;position:absolute;right:0;top:calc(100% + 10px);z-index:30;width:min(280px,72vw);
     padding:12px 14px;border-radius:12px;background:var(--console);color:var(--console-ink);
@@ -1199,7 +1204,7 @@
   <div class="load-inner">
     <div class="load-left">
       <div class="load-kicker"><span class="live-dot"></span> Agent reasoning · live</div>
-      <div class="load-title">Extrapolating <span class="dname" id="l-drug">a dose</span><br>from adult PK</div>
+      <div class="load-title" id="load-title">Extrapolating <span class="dname" id="l-drug">a dose</span><br>from adult PK</div>
       <p class="reassure" id="reassure">Warming up the pharmacometric engine…</p>
       <div class="stages" id="stages">
         <div class="stage" data-k="mechanism"><span class="ic">◇</span><span class="lbl"><b>Identify mechanism</b><small>elimination route · enzymes · metabolites</small></span></div>
@@ -1385,10 +1390,10 @@ function applyCalculatorMode(){
   $("hepatic").disabled = adult;
   $("calc-h2").textContent = adult ? "Adult hepatic-impairment dose" : "Dose a child";
   $("calc-intro").textContent = adult
-    ? "Hepatic impairment is on. A Child-Pugh class or complete labs are required. Age does not switch this to pediatric extrapolation."
+    ? "Cited label lookup for hepatic impairment. No allometry, no maturation, no A–D grade. A Child-Pugh class or complete labs are required."
     : "Enter a drug and the child’s details. Adult PK is retrieved live from PubMed and openFDA.";
   $("calc-mode-hint").textContent = adult
-    ? "Adult HI calculator — hepatic impairment is on. Age does not switch facades."
+    ? "Adult HI calculator — label dose, no labeled adjustment, or contraindicated. Age does not switch facades."
     : "Age does not switch this. Pediatric + hepatic off is the healthy-liver path.";
   $("hepatic-detail-title").textContent = adult
     ? "Hepatic function — required for the Adult HI calculator."
@@ -1484,7 +1489,27 @@ function startReassure(){
 function stopReassure(){ clearInterval(reassureTimer); }
 
 /* ---------------- stages ---------------- */
-const STAGE_ORDER = ["mechanism","retrieve","compute","guideline","grade"];
+const PEDIATRIC_STAGES = ["mechanism","retrieve","compute","guideline","grade"];
+const ADULT_HI_STAGES = ["retrieve","resolve","outcome"];
+let STAGE_ORDER = PEDIATRIC_STAGES.slice();
+const PEDIATRIC_STAGE_HTML = `<div class="stage" data-k="mechanism"><span class="ic">◇</span><span class="lbl"><b>Identify mechanism</b><small>elimination route · enzymes · metabolites</small></span></div>
+        <div class="stage" data-k="retrieve"><span class="ic">⚗</span><span class="lbl"><b>Fire retrieval subagent</b><small>live PubMed + openFDA for adult PK</small></span></div>
+        <div class="stage" data-k="compute"><span class="ic">∫</span><span class="lbl"><b>Scale by allometry × maturation</b><small>the deterministic engine</small></span></div>
+        <div class="stage" data-k="guideline"><span class="ic">§</span><span class="lbl"><b>Cross-check the guideline</b><small>concordance band 0.67× – 1.5×</small></span></div>
+        <div class="stage" data-k="grade"><span class="ic">✦</span><span class="lbl"><b>Grade &amp; write rationale</b><small>cited, auditable, A → D</small></span></div>`;
+const ADULT_HI_STAGE_HTML = `<div class="stage" data-k="retrieve"><span class="ic">⚗</span><span class="lbl"><b>Look up the adult label</b><small>openFDA hepatic-impairment dosing</small></span></div>
+        <div class="stage" data-k="resolve"><span class="ic">∫</span><span class="lbl"><b>Resolve the cited HI row</b><small>no allometry · no maturation</small></span></div>
+        <div class="stage" data-k="outcome"><span class="ic">✦</span><span class="lbl"><b>Outcome</b><small>Label dose · No labeled adjustment · Contraindicated</small></span></div>`;
+function setLoadingMode(adult){
+  STAGE_ORDER = adult ? ADULT_HI_STAGES.slice() : PEDIATRIC_STAGES.slice();
+  $("stages").innerHTML = adult ? ADULT_HI_STAGE_HTML : PEDIATRIC_STAGE_HTML;
+  const title = $("load-title");
+  if(title){
+    title.innerHTML = adult
+      ? `Looking up the labeled HI dose for <span class="dname" id="l-drug">a drug</span>`
+      : `Extrapolating <span class="dname" id="l-drug">a dose</span><br>from adult PK`;
+  }
+}
 function setStage(key, state){ // state: 'active' | 'done'
   const el = document.querySelector(`.stage[data-k="${key}"]`);
   if(!el) return;
@@ -1534,6 +1559,14 @@ function handleStep(text){
   } else if(text.startsWith("→ compute_pediatric_dose")){
     advanceTo("compute");
     pushLine(`<span class="arrow">∫ engine</span> — scaling adult PK by allometry × maturation…`);
+  } else if(/adult_hi_facade|adult HI outcome/i.test(text)){
+    if(/outcome/i.test(text)){
+      advanceTo("outcome");
+      pushLine(`<span class="arrow">✦ outcome</span> — ${esc(text.replace(/^→\s*/,""))}`);
+    } else {
+      advanceTo("resolve");
+      pushLine(`<span class="arrow">∫ label lookup</span> — resolving the cited HI row (no allometry)…`);
+    }
   } else if(text.startsWith("→ web_search")){
     advanceTo("guideline");
     const q = text.split("guideline")[1] || "";
@@ -1636,12 +1669,17 @@ $("form").addEventListener("submit", async (e)=>{
 
   // prep loading screen
   $("console").innerHTML = "";
-  document.querySelectorAll(".stage").forEach(s=>{ s.classList.remove("active","done"); });
-  document.querySelectorAll(".stage .ic").forEach((ic,i)=>{ ic.textContent = ["◇","⚗","∫","§","✦"][i]; });
+  const adultHi = payload.calculator_mode === "adult_hi";
+  setLoadingMode(adultHi);
   $("l-drug").textContent = (DRUGS[drug]||{}).name || drug;
   go("loading"); startReassure();
-  advanceTo("mechanism");
-  pushLine(`<span class="arrow">◇ booting orchestrator</span> — case received: <b>${esc((DRUGS[drug]||{}).name||drug)}</b>, ${payload.age_years} yr · ${payload.weight_kg} kg`);
+  if(adultHi){
+    advanceTo("retrieve");
+    pushLine(`<span class="arrow">⚗ label lookup</span> — Adult HI calculator for <b>${esc((DRUGS[drug]||{}).name||drug)}</b> (no allometry, no A–D)`);
+  } else {
+    advanceTo("mechanism");
+    pushLine(`<span class="arrow">◇ booting orchestrator</span> — case received: <b>${esc((DRUGS[drug]||{}).name||drug)}</b>, ${payload.age_years} yr · ${payload.weight_kg} kg`);
+  }
 
   try{
     const res = await fetch("/calculate/stream", {
@@ -1685,9 +1723,16 @@ function showError(msg){
 }
 
 async function finishAndRender(data){
-  // let the "grade" stage light up briefly for polish
-  advanceTo("grade");
-  pushLine(`<span class="arrow">✦ done</span> — recommendation graded and cited.`);
+  const adultHi = (currentCase && currentCase.calculator_mode === "adult_hi")
+    || !!(data.recommendation && data.recommendation.hi_outcome);
+  if(adultHi){
+    advanceTo("outcome");
+    const lab = (data.recommendation && (data.recommendation.hi_outcome_label || data.recommendation.hi_outcome)) || "done";
+    pushLine(`<span class="arrow">✦ done</span> — Adult HI outcome: ${esc(String(lab))}.`);
+  } else {
+    advanceTo("grade");
+    pushLine(`<span class="arrow">✦ done</span> — recommendation graded and cited.`);
+  }
   await new Promise(r=>setTimeout(r, 650));
   stopReassure();
   renderResult(data);
@@ -1709,8 +1754,12 @@ function fmtList(a){ return (a&&a.length)? a.join(", ") : null; }
 
 function renderResult(data){
   currentRec = data.recommendation || {};
-  const r = currentRec, g = (r.grade||"D").toUpperCase();
+  const r = currentRec;
+  const hiOutcome = r.hi_outcome;
+  const adultHi = (currentCase && currentCase.calculator_mode === "adult_hi") || !!hiOutcome;
+  const g = adultHi ? null : (r.grade||"D").toUpperCase();
   const dpk = r.final_dose_mg_per_kg_per_day;
+  const dday = r.final_dose_mg_per_day;
 
   // case summary bar
   const c = currentCase, dn = (DRUGS[c.drug]||{}).name||c.drug;
@@ -1734,11 +1783,21 @@ function renderResult(data){
 
   // dose hero (suppressed to "—" when blocked)
   h += `<div class="dose-hero"><div class="dose-primary">`;
-  h += (dpk!=null && !blocked)
-    ? `<div class="dose-num"><span class="big">${dpk}</span><span class="unit">mg/kg/day</span></div>`
-    : `<div class="dose-num"><span class="big">—</span></div>`;
+  if(adultHi){
+    h += (dday!=null && !blocked)
+      ? `<div class="dose-num"><span class="big">${dday}</span><span class="unit">mg/day</span></div>`
+      : `<div class="dose-num"><span class="big">—</span></div>`;
+  } else {
+    h += (dpk!=null && !blocked)
+      ? `<div class="dose-num"><span class="big">${dpk}</span><span class="unit">mg/kg/day</span></div>`
+      : `<div class="dose-num"><span class="big">—</span></div>`;
+  }
   const metrics = [];
-  if(r.final_dose_mg_per_day!=null) metrics.push(`<span class="m">≈ <b>${r.final_dose_mg_per_day}</b> mg/day</span>`);
+  if(adultHi){
+    if(dpk!=null && !blocked) metrics.push(`<span class="m">≈ <b>${dpk}</b> mg/kg/day</span>`);
+  } else if(r.final_dose_mg_per_day!=null){
+    metrics.push(`<span class="m">≈ <b>${r.final_dose_mg_per_day}</b> mg/day</span>`);
+  }
   if(r.interval) metrics.push(`<span class="m">${esc(r.interval)}</span>`);
   if(r.route) metrics.push(`<span class="m">${esc(r.route)}</span>`);
   if(metrics.length) h += `<div class="dose-meta">${metrics.join('<span class="sep"></span>')}</div>`;
@@ -1762,14 +1821,26 @@ function renderResult(data){
       h += ` — unrounded.</div></div>`;
     }
   }
-  h += `</div><div class="grade ${g}" tabindex="0" aria-label="Evidence grade ${g}. Hover for legend.">`
-     + `<span class="lab">GRADE</span>${g}`
-     + `<div class="tip" role="tooltip">`
-     + `<div class="row"><b>A</b> — passes concordance vs a real guideline</div>`
-     + `<div class="row"><b>B</b> — solid PK, no guideline to check</div>`
-     + `<div class="row"><b>C</b> — sparse/uncertain; directional only</div>`
-     + `<div class="row"><b>D</b> — insufficient data / safety stop</div>`
-     + `</div></div></div>`;
+  if(adultHi){
+    const olab = r.hi_outcome_label || hiOutcome || "Abstain";
+    const okey = hiOutcome || "abstain";
+    h += `</div><div class="grade outcome ${esc(okey)}" tabindex="0" aria-label="Adult HI outcome ${esc(olab)}.">`
+       + `<span class="lab">OUTCOME</span>${esc(olab)}`
+       + `<div class="tip" role="tooltip">`
+       + `<div class="row"><b>Label dose</b> — cited hepatic-impairment dose from the label</div>`
+       + `<div class="row"><b>No labeled adjustment</b> — usual adult dose; no HI change</div>`
+       + `<div class="row"><b>Contraindicated</b> — label says do not use in this class</div>`
+       + `</div></div></div>`;
+  } else {
+    h += `</div><div class="grade ${g}" tabindex="0" aria-label="Evidence grade ${g}. Hover for legend.">`
+       + `<span class="lab">GRADE</span>${g}`
+       + `<div class="tip" role="tooltip">`
+       + `<div class="row"><b>A</b> — passes concordance vs a real guideline</div>`
+       + `<div class="row"><b>B</b> — solid PK, no guideline to check</div>`
+       + `<div class="row"><b>C</b> — sparse/uncertain; directional only</div>`
+       + `<div class="row"><b>D</b> — insufficient data / safety stop</div>`
+       + `</div></div></div>`;
+  }
   if(r.grade_rationale) h += `<div class="md" style="color:var(--ink-2);font-size:.92rem;margin-bottom:6px">${esc(r.grade_rationale)}</div>`;
 
   // concordance
@@ -1873,15 +1944,28 @@ function paras(s){ return (s||"").split(/\n\n+/).map(p=>`<p>${esc(p).replace(/\n
 
 function buildChat(r){
   $("chat-body").innerHTML = ""; chatHistory = [];
-  const g = (r.grade||"D").toUpperCase();
+  const hiOutcome = r.hi_outcome;
+  const adultHi = (currentCase && currentCase.calculator_mode === "adult_hi") || !!hiOutcome;
+  const g = adultHi ? null : (r.grade||"D").toUpperCase();
   const dpk = r.final_dose_mg_per_kg_per_day;
+  const dday = r.final_dose_mg_per_day;
 
   // greeting
-  addMsg("assistant", `<p>Here's your <b>Grade ${g}</b> recommendation${dpk!=null?` — <b>${dpk} mg/kg/day</b>`:""}. I've answered a few common questions below; ask me anything else.</p>`);
+  if(adultHi){
+    const olab = r.hi_outcome_label || hiOutcome || "Abstain";
+    addMsg("assistant", `<p>Here's the Adult HI outcome: <b>${esc(olab)}</b>${dday!=null?` — <b>${dday} mg/day</b>`:""}. This is a cited label lookup — not an A–D graded pediatric extrapolation.</p>`);
+  } else {
+    addMsg("assistant", `<p>Here's your <b>Grade ${g}</b> recommendation${dpk!=null?` — <b>${dpk} mg/kg/day</b>`:""}. I've answered a few common questions below; ask me anything else.</p>`);
+  }
 
   // build preloaded Q&A from the recommendation itself (no extra API cost)
   const pre = [];
-  if(r.grade_rationale) pre.push(["Why did this earn a Grade "+g+"?", r.grade_rationale]);
+  if(adultHi){
+    if(r.grade_rationale) pre.push(["Why is there no A–D grade?", r.grade_rationale]);
+    if(r.rationale) pre.push(["What did the label say?", r.rationale]);
+  } else {
+    if(r.grade_rationale) pre.push(["Why did this earn a Grade "+g+"?", r.grade_rationale]);
+  }
   if(r.concordance && (r.concordance.verdict || r.concordance.ratio!=null)){
     const cc=r.concordance; let a = cc.verdict||"";
     if(cc.ratio!=null) a += ` The estimate sits at ${cc.ratio}× the guideline (concordance band 0.67×–1.5×).`;
@@ -1897,7 +1981,11 @@ function buildChat(r){
   });
 
   // suggestion chips for live questions
-  const chips = [
+  const chips = adultHi ? [
+    "Where did this labeled dose come from?",
+    "What if the label and a pediatric HI guideline disagree?",
+    "How should I monitor this patient?",
+  ] : [
     "Why not just scale the adult dose by weight?",
     "What would change this from Grade "+g+"?",
     r.mechanism && r.mechanism.active_metabolites && r.mechanism.active_metabolites.length ? "Why do the active metabolites matter?" : "How confident are you in the retrieved PK?",

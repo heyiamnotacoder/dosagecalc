@@ -12,6 +12,7 @@ from engine.child_pugh import resolve_calculator_mode, resolve_child_pugh
 from engine.hi_table import (
     apply_hi_resolution,
     oral_high_extraction_abstain,
+    pick_facade_table,
 )
 
 HEPATIC_FM_THRESHOLD = 0.3
@@ -78,47 +79,17 @@ def _renal_stacked(case: dict) -> bool:
     return False
 
 
-def _resolution_key(res: dict) -> tuple:
-    dose = res.get("adult_dose_mg_per_day")
-    try:
-        dose_k = round(float(dose), 6) if dose is not None else None
-    except (TypeError, ValueError):
-        dose_k = dose
-    fold = res.get("fold")
-    try:
-        fold_k = round(float(fold), 6) if fold is not None else None
-    except (TypeError, ValueError):
-        fold_k = fold
-    return (res.get("status"), res.get("kind"), dose_k, fold_k)
-
-
-def _usable(res: dict) -> bool:
-    if res.get("status") != "ok":
-        return False
-    if res.get("kind") == "contraindicated":
-        return True
-    return res.get("adult_dose_mg_per_day") is not None
-
-
 def pick_pediatric_facade_table(
     case: dict,
     adult_table: Optional[dict],
     pediatric_table: Optional[dict],
 ) -> tuple[Optional[dict], str, list[str]]:
     """Pediatric guideline wins when it has an applicable row; flag adult conflict."""
-    flags: list[str] = []
-    adult_res = apply_hi_resolution(case, adult_table) if adult_table else None
-    ped_res = apply_hi_resolution(case, pediatric_table) if pediatric_table else None
-
-    if ped_res is not None and _usable(ped_res):
-        if adult_res is not None and _usable(adult_res) and _resolution_key(ped_res) != _resolution_key(adult_res):
-            flags.append(GUIDELINE_CONFLICT_FLAG)
-        return pediatric_table, "pediatric_guideline", flags
-    if adult_table:
-        return adult_table, "adult_label", flags
-    if pediatric_table:
-        return pediatric_table, "pediatric_guideline", flags
-    return None, "none", flags
+    table, source, conflict = pick_facade_table(
+        case, adult_table, pediatric_table, prefer="pediatric_guideline"
+    )
+    flags = [GUIDELINE_CONFLICT_FLAG] if conflict else []
+    return table, source, flags
 
 
 def _hepatic_note(case: dict, source: str, res: dict) -> str:

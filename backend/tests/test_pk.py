@@ -637,5 +637,26 @@ if __name__ == "__main__":
     test_oral_high_e_requires_oral_product_row()
     test_pediatric_guideline_beats_adult_label()
     test_cap_grade_never_raises()
+    from tests.test_adult_hi import (
+        test_adult_hi_emits_three_outcomes,
+        test_no_allometry_and_no_ad_grade,
+        test_same_hi_module_no_second_parser,
+        test_oral_high_e_same_rule,
+        test_adult_label_beats_pediatric_guideline,
+        test_fold_only_no_adult_dose_abstains,
+        test_contraindicated_blocked_no_dose,
+        test_age_under_18_still_adult_facade,
+        test_run_case_short_circuits_orchestrator,
+    )
+    print("Adult HI facade (issue #6):")
+    test_adult_hi_emits_three_outcomes()
+    test_no_allometry_and_no_ad_grade()
+    test_same_hi_module_no_second_parser()
+    test_oral_high_e_same_rule()
+    test_adult_label_beats_pediatric_guideline()
+    test_fold_only_no_adult_dose_abstains()
+    test_contraindicated_blocked_no_dose()
+    test_age_under_18_still_adult_facade()
+    test_run_case_short_circuits_orchestrator()
     concordance_check()
     print("\nAll structural tests passed.")

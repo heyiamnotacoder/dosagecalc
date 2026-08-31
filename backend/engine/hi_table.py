@@ -344,6 +344,74 @@ def apply_hi_resolution(case: dict, table: Optional[dict]) -> dict[str, Any]:
     )
 
 
+def resolution_key(res: Optional[dict]) -> tuple:
+    """Identity of a resolver result so facades can detect adult vs pediatric conflict."""
+    if not res:
+        return (None, None, None, None)
+    dose = res.get("adult_dose_mg_per_day")
+    try:
+        dose_k = round(float(dose), 6) if dose is not None else None
+    except (TypeError, ValueError):
+        dose_k = dose
+    fold = res.get("fold")
+    try:
+        fold_k = round(float(fold), 6) if fold is not None else None
+    except (TypeError, ValueError):
+        fold_k = fold
+    return (res.get("status"), res.get("kind"), dose_k, fold_k)
+
+
+def usable_hi_resolution(res: Optional[dict]) -> bool:
+    """True when the resolver returned a class instruction this facade can act on."""
+    if not res or res.get("status") != "ok":
+        return False
+    if res.get("kind") == "contraindicated":
+        return True
+    return res.get("adult_dose_mg_per_day") is not None
+
+
+def pick_facade_table(
+    case: dict,
+    adult_table: Optional[dict],
+    pediatric_table: Optional[dict],
+    *,
+    prefer: str,
+) -> tuple[Optional[dict], str, bool]:
+    """Pick one cited table. prefer is adult_label or pediatric_guideline.
+
+    Conflict is True only when both tables have a usable, disagreeing row.
+    Returns (table, source, conflict). Source is adult_label | pediatric_guideline | none.
+    """
+    if prefer not in ("adult_label", "pediatric_guideline"):
+        raise ValueError("prefer must be 'adult_label' or 'pediatric_guideline'")
+    adult_res = apply_hi_resolution(case, adult_table) if adult_table else None
+    ped_res = apply_hi_resolution(case, pediatric_table) if pediatric_table else None
+    adult_ok = usable_hi_resolution(adult_res)
+    ped_ok = usable_hi_resolution(ped_res)
+    conflict = (
+        adult_ok
+        and ped_ok
+        and resolution_key(adult_res) != resolution_key(ped_res)
+    )
+
+    if prefer == "pediatric_guideline":
+        if ped_ok:
+            return pediatric_table, "pediatric_guideline", conflict
+        if adult_table:
+            return adult_table, "adult_label", False
+        if pediatric_table:
+            return pediatric_table, "pediatric_guideline", False
+        return None, "none", False
+
+    if adult_ok:
+        return adult_table, "adult_label", conflict
+    if pediatric_table:
+        return pediatric_table, "pediatric_guideline", False
+    if adult_table:
+        return adult_table, "adult_label", False
+    return None, "none", False
+
+
 # Oral high-extraction / first-pass — same rule for pediatric (#5) and adult HI (#6).
 # High-E oral HI is first-pass collapse; an IV/unspecified row is not that adjustment.
 HIGH_EXTRACTION_F_MAX = 0.3

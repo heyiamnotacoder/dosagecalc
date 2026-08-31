@@ -483,9 +483,17 @@ def test_child_pugh():
 
     patch = resolve_child_pugh({
         "bilirubin_mg_dl": 1.0, "albumin_g_dl": 4.0, "inr": 1.0,
-        "child_pugh": "C",  # labs win when complete
+        "ascites": "none", "encephalopathy": "none",
+        "child_pugh": "C",  # complete labs win when ascites/enceph are explicit
     })
     assert patch["child_pugh"] == "A" and patch["child_pugh_source"] == "calculated"
+
+    # Labs without explicit ascites/encephalopathy must not silently default to none.
+    no_signs = resolve_child_pugh({
+        "bilirubin_mg_dl": 1.0, "albumin_g_dl": 4.0, "inr": 1.0,
+        "child_pugh": "C",
+    })
+    assert no_signs["child_pugh"] == "C" and no_signs["child_pugh_source"] == "entered"
 
     entered = resolve_child_pugh({"child_pugh": "b"})
     assert entered["child_pugh"] == "B" and entered["child_pugh_source"] == "entered"
@@ -589,5 +597,24 @@ if __name__ == "__main__":
     test_both_facades_share_resolve_hi_dose()
     test_retrieval_attaches_live_hi_table()
     test_compute_uses_shared_hi_resolver()
+    from tests.test_hi_gate import (
+        test_pediatric_healthy_liver_still_submits,
+        test_pediatric_hepatic_requires_class_or_complete_labs,
+        test_adult_hi_requires_class_even_if_hepatic_box_off,
+        test_empty_ascites_is_not_implicit_none,
+        test_age_does_not_switch_facades,
+        test_normalize_adult_hi_sets_hepatic_and_flags_child_pugh_on_child,
+        test_resolve_does_not_default_missing_signs,
+        test_server_rejects_incomplete_hi,
+    )
+    print("HI gate + calculator toggle (issue #4):")
+    test_pediatric_healthy_liver_still_submits()
+    test_pediatric_hepatic_requires_class_or_complete_labs()
+    test_adult_hi_requires_class_even_if_hepatic_box_off()
+    test_empty_ascites_is_not_implicit_none()
+    test_age_does_not_switch_facades()
+    test_normalize_adult_hi_sets_hepatic_and_flags_child_pugh_on_child()
+    test_resolve_does_not_default_missing_signs()
+    test_server_rejects_incomplete_hi()
     concordance_check()
     print("\nAll structural tests passed.")

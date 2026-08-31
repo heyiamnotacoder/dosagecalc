@@ -372,6 +372,14 @@ def _normalize_case(case: dict) -> dict:
     or calculated from labs (bilirubin, albumin, INR ± ascites/encephalopathy).
     """
     c = dict(case)
+    from engine.child_pugh import resolve_calculator_mode
+
+    try:
+        c["calculator_mode"] = resolve_calculator_mode(c)
+    except ValueError:
+        c["calculator_mode"] = str(c.get("calculator_mode") or "").strip().lower() or "pediatric"
+    if c["calculator_mode"] == "adult_hi":
+        c["hepatic_impairment"] = True
     if "renal_function_fraction" not in c:
         frac = None
         if c.get("renal_impairment"):
@@ -461,6 +469,13 @@ def _organ_function_flags(case: dict, applied_renal_frac: float | None = None) -
             "hepatic extraction ratio and metabolic pathway). No automatic clearance reduction was "
             "applied — consult a drug-specific hepatic-impairment reference; further research required."
         )
+        age = case.get("age_years")
+        try:
+            if cp and age is not None and float(age) < 18:
+                from engine.child_pugh import CHILD_PUGH_ON_CHILD_FLAG
+                flags.append(CHILD_PUGH_ON_CHILD_FLAG)
+        except (TypeError, ValueError):
+            pass
     return flags
 
 
@@ -479,6 +494,13 @@ def _apply_organ_function_flags(
 def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
     """Run one dosing case end-to-end."""
     case = _normalize_case(case)
+    from engine.child_pugh import hi_gate_error
+
+    gate = hi_gate_error(case)
+    if gate:
+        if on_step:
+            on_step(gate)
+        return {"error": gate, "recommendation": None}
     client = Anthropic()
     user_msg = (
         "Dose this case. Follow your pipeline and finish with submit_recommendation.\n\n"

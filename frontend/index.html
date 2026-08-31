@@ -337,6 +337,8 @@
     border-radius:12px;cursor:pointer;background:#fff;font-size:.92rem;color:var(--ink-2);font-weight:500;transition:.12s}
   .toggle:has(input:checked){border-color:var(--teal);background:var(--teal-wash);color:var(--teal-deep)}
   .toggle input{width:18px;height:18px;accent-color:var(--teal);cursor:pointer}
+  .toggle:has(input:disabled){opacity:.72;cursor:not-allowed}
+  .toggle input:disabled{cursor:not-allowed}
   .neo{margin-top:6px;padding:15px 16px;background:var(--amber-wash);border:1px solid #EBD9B4;border-radius:12px;
     font-size:.86rem;color:#6b4a12;display:none}
   .neo.show{display:block}
@@ -1028,8 +1030,17 @@
   <div class="calc-shell">
     <form class="calc-card" id="form">
       <div class="kicker">New case</div>
-      <h2>Dose a child</h2>
-      <p class="intro">Enter a drug and the child’s details. Adult PK is retrieved live from PubMed and openFDA.</p>
+      <h2 id="calc-h2">Dose a child</h2>
+      <p class="intro" id="calc-intro">Enter a drug and the child’s details. Adult PK is retrieved live from PubMed and openFDA.</p>
+
+      <div class="field">
+        <label>Calculator</label>
+        <div class="seg" role="group" aria-label="Calculator mode">
+          <label><input type="radio" name="calculator-mode" value="pediatric" checked><span class="opt">Pediatric extrapolation</span></label>
+          <label><input type="radio" name="calculator-mode" value="adult_hi"><span class="opt">Adult HI calculator</span></label>
+        </div>
+        <div class="hint" id="calc-mode-hint">Age does not switch this. Pediatric + hepatic off is the healthy-liver path.</div>
+      </div>
 
       <div class="field">
         <label for="drug">Drug</label>
@@ -1109,7 +1120,7 @@
       </div>
 
       <div class="neo info" id="hepatic-detail">
-        <strong>Hepatic function — noted, not auto-adjusted.</strong>
+        <strong id="hepatic-detail-title">Hepatic function — Child-Pugh class required.</strong>
         <div class="cp-mode" style="margin-top:8px">
           <label>Child-Pugh</label>
           <div class="seg" role="group" aria-label="Child-Pugh input mode">
@@ -1119,7 +1130,7 @@
           <div class="cp-pane show" id="cp-enter">
             <label for="child-pugh">Child-Pugh class</label>
             <select id="child-pugh">
-              <option value="">— not specified —</option>
+              <option value="">— select class —</option>
               <option value="A">A (mild)</option>
               <option value="B">B (moderate)</option>
               <option value="C">C (severe)</option>
@@ -1142,6 +1153,7 @@
               <div>
                 <label for="ascites">Ascites</label>
                 <select id="ascites">
+                  <option value="">— select —</option>
                   <option value="none">None</option>
                   <option value="mild">Mild / slight</option>
                   <option value="moderate">Moderate / severe</option>
@@ -1150,16 +1162,18 @@
               <div>
                 <label for="enceph">Encephalopathy</label>
                 <select id="enceph">
+                  <option value="">— select —</option>
                   <option value="none">None</option>
                   <option value="1-2">Grade 1–2</option>
                   <option value="3-4">Grade 3–4</option>
                 </select>
               </div>
             </div>
-            <div class="cp-preview" id="cp-preview">Enter bilirubin, albumin, and INR to preview class.</div>
+            <div class="cp-preview" id="cp-preview">Enter bilirubin, albumin, INR, and pick ascites and encephalopathy (including explicit none).</div>
           </div>
         </div>
-        <div class="hint">Child-Pugh class is recorded for review; dose adjustment is drug-specific.</div>
+        <div class="hint" id="hepatic-hint">Class or complete labs are required. Ascites and encephalopathy have no implicit none.</div>
+        <div class="hint" id="cp-child-flag" hidden>Child-Pugh is adult cirrhosis scoring — not a pediatric liver-function scale.</div>
       </div>
 
       <div class="field">
@@ -1359,14 +1373,50 @@ const age = $("age");
 function checkNeo(){ $("neo").classList.toggle("show", parseFloat(age.value) < 2); }
 age.addEventListener("input", checkNeo); checkNeo();
 
+function calculatorMode(){
+  return (document.querySelector('input[name="calculator-mode"]:checked')||{}).value || "pediatric";
+}
+function hiPathOn(){
+  return calculatorMode() === "adult_hi" || $("hepatic").checked;
+}
+function applyCalculatorMode(){
+  const adult = calculatorMode() === "adult_hi";
+  if(adult) $("hepatic").checked = true;
+  $("hepatic").disabled = adult;
+  $("calc-h2").textContent = adult ? "Adult hepatic-impairment dose" : "Dose a child";
+  $("calc-intro").textContent = adult
+    ? "Hepatic impairment is on. A Child-Pugh class or complete labs are required. Age does not switch this to pediatric extrapolation."
+    : "Enter a drug and the child’s details. Adult PK is retrieved live from PubMed and openFDA.";
+  $("calc-mode-hint").textContent = adult
+    ? "Adult HI calculator — hepatic impairment is on. Age does not switch facades."
+    : "Age does not switch this. Pediatric + hepatic off is the healthy-liver path.";
+  $("hepatic-detail-title").textContent = adult
+    ? "Hepatic function — required for the Adult HI calculator."
+    : "Hepatic function — Child-Pugh class required.";
+  checkOrgan();
+  updateCpChildFlag();
+}
+function updateCpChildFlag(){
+  const el = $("cp-child-flag");
+  if(!el) return;
+  const ageY = parseFloat(age.value);
+  const show = hiPathOn() && Number.isFinite(ageY) && ageY < 18;
+  el.hidden = !show;
+}
+
 /* ---------------- organ-function detail reveal ---------------- */
 function checkOrgan(){
   $("renal-detail").classList.toggle("show", $("renal").checked);
-  $("hepatic-detail").classList.toggle("show", $("hepatic").checked);
+  $("hepatic-detail").classList.toggle("show", hiPathOn());
+  updateCpChildFlag();
 }
 $("renal").addEventListener("change", checkOrgan);
 $("hepatic").addEventListener("change", checkOrgan);
-checkOrgan();
+document.querySelectorAll('input[name="calculator-mode"]').forEach(r=>{
+  r.addEventListener("change", applyCalculatorMode);
+});
+age.addEventListener("input", updateCpChildFlag);
+applyCalculatorMode();
 
 /* ---------------- Child-Pugh enter vs calculate ---------------- */
 function cpMode(){
@@ -1384,12 +1434,13 @@ function updateCpPreview(){
   const el = $("cp-preview");
   if(!el) return;
   const b = parseFloat($("bili").value), a = parseFloat($("albumin").value), i = parseFloat($("inr").value);
-  if(!Number.isFinite(b) || !Number.isFinite(a) || !Number.isFinite(i) || i<=0){
+  const ascites = $("ascites").value, enceph = $("enceph").value;
+  if(!Number.isFinite(b) || !Number.isFinite(a) || !Number.isFinite(i) || i<=0 || !ascites || !enceph){
     el.classList.remove("ready");
-    el.innerHTML = "Enter bilirubin, albumin, and INR to preview class.";
+    el.innerHTML = "Enter bilirubin, albumin, INR, and pick ascites and encephalopathy (including explicit none).";
     return;
   }
-  const score = biliPts(b)+albPts(a)+inrPts(i)+ascitesPts($("ascites").value)+encephPts($("enceph").value);
+  const score = biliPts(b)+albPts(a)+inrPts(i)+ascitesPts(ascites)+encephPts(enceph);
   const cls = score<=6?"A":score<=9?"B":"C";
   el.classList.add("ready");
   el.innerHTML = `Preview: score <b>${score}</b> → Child-Pugh <b>${cls}</b> (server recomputes authoritatively)`;
@@ -1519,6 +1570,24 @@ $("form").addEventListener("submit", async (e)=>{
   if(!Number.isFinite(wt) || wt <= 0){
     formError("Enter a valid weight in kg (> 0)."); return;
   }
+  const calcMode = calculatorMode();
+  const hepaticOn = calcMode === "adult_hi" || $("hepatic").checked;
+  if(hepaticOn){
+    const cpHow = (document.querySelector('input[name="cp-mode"]:checked')||{}).value || "enter";
+    if(cpHow==="enter"){
+      if(!$("child-pugh").value){
+        formError("Child-Pugh class A, B, or C is required (or calculate from complete labs)."); return;
+      }
+    } else {
+      const b = parseFloat($("bili").value), al = parseFloat($("albumin").value), i = parseFloat($("inr").value);
+      if(!Number.isFinite(b) || b<0 || !Number.isFinite(al) || al<0 || !Number.isFinite(i) || i<=0){
+        formError("Complete labs are required: bilirubin, albumin, and INR."); return;
+      }
+      if(!$("ascites").value || !$("enceph").value){
+        formError("Pick ascites and encephalopathy (including explicit none). There is no implicit none."); return;
+      }
+    }
+  }
   $("keyhint").classList.remove("warn");
   fetch("/health").then(r=>r.json()).then(h=>{
     if(h.has_api_key) $("keyhint").textContent = "Ready";
@@ -1529,8 +1598,9 @@ $("form").addEventListener("submit", async (e)=>{
     indication: $("indication").value || null,
     age_years: ageY,
     weight_kg: wt,
+    calculator_mode: calcMode,
     renal_impairment: $("renal").checked,
-    hepatic_impairment: $("hepatic").checked,
+    hepatic_impairment: hepaticOn,
     route: document.querySelector('input[name="route"]:checked').value,
   };
   const conc = parseFloat($("formulation").value);
@@ -1546,16 +1616,15 @@ $("form").addEventListener("submit", async (e)=>{
     if(Number.isFinite(scr) && scr > 0) payload.serum_creatinine_mg_dl = scr;
     if(Number.isFinite(ht) && ht > 0) payload.height_cm = ht;
   }
-  if($("hepatic").checked){
+  if(hepaticOn){
     const mode = (document.querySelector('input[name="cp-mode"]:checked')||{}).value || "enter";
     if(mode==="calc"){
-      const b = parseFloat($("bili").value), a = parseFloat($("albumin").value), i = parseFloat($("inr").value);
-      if(Number.isFinite(b) && b>=0) payload.bilirubin_mg_dl = b;
-      if(Number.isFinite(a) && a>=0) payload.albumin_g_dl = a;
-      if(Number.isFinite(i) && i>0) payload.inr = i;
-      payload.ascites = $("ascites").value || "none";
-      payload.encephalopathy = $("enceph").value || "none";
-    } else if($("child-pugh").value){
+      payload.bilirubin_mg_dl = parseFloat($("bili").value);
+      payload.albumin_g_dl = parseFloat($("albumin").value);
+      payload.inr = parseFloat($("inr").value);
+      payload.ascites = $("ascites").value;
+      payload.encephalopathy = $("enceph").value;
+    } else {
       payload.child_pugh = $("child-pugh").value;
     }
   }
@@ -1647,6 +1716,7 @@ function renderResult(data){
   const c = currentCase, dn = (DRUGS[c.drug]||{}).name||c.drug;
   $("case-sum").innerHTML = `<b>${esc(dn)}</b> · ${c.age_years} yr · ${c.weight_kg} kg · ${esc(c.route)}`
     + (c.indication?` · ${esc(c.indication)}`:"")
+    + (c.calculator_mode==="adult_hi"?` · Adult HI calculator`:` · Pediatric extrapolation`)
     + (c.renal_impairment?` · renal impairment`:"") + (c.hepatic_impairment?` · hepatic impairment`:"")
     + (c.allergies&&c.allergies.length?` · allergies: ${esc(c.allergies.join(", "))}`:"")
     + (c.conditions&&c.conditions.length?` · conditions: ${esc(c.conditions.join(", "))}`:"")

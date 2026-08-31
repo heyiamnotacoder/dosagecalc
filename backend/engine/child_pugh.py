@@ -36,8 +36,12 @@ def _inr_points(inr: float) -> int:
 
 
 def _ascites_points(ascites: str) -> int:
-    a = (ascites or "none").strip().lower()
-    if a in ("none", "absent", "no", ""):
+    if ascites is None:
+        raise ValueError("ascites is required (use none|mild|moderate); no implicit none")
+    a = str(ascites).strip().lower()
+    if not a:
+        raise ValueError("ascites is required (use none|mild|moderate); no implicit none")
+    if a in ("none", "absent", "no"):
         return 1
     if a in ("mild", "slight", "1", "grade1"):
         return 2
@@ -47,8 +51,12 @@ def _ascites_points(ascites: str) -> int:
 
 
 def _encephalopathy_points(encephalopathy: str) -> int:
-    e = (encephalopathy or "none").strip().lower().replace(" ", "")
-    if e in ("none", "absent", "no", "0", ""):
+    if encephalopathy is None:
+        raise ValueError("encephalopathy is required (use none|1-2|3-4); no implicit none")
+    e = str(encephalopathy).strip().lower().replace(" ", "")
+    if not e:
+        raise ValueError("encephalopathy is required (use none|1-2|3-4); no implicit none")
+    if e in ("none", "absent", "no", "0"):
         return 1
     if e in ("1-2", "1to2", "grade1-2", "grade1", "grade2", "1", "2", "mild"):
         return 2
@@ -57,6 +65,24 @@ def _encephalopathy_points(encephalopathy: str) -> int:
     raise ValueError(
         f"Unknown encephalopathy value: {encephalopathy!r} (use none|1-2|3-4)"
     )
+
+
+def _is_explicit_ascites(value: Any) -> bool:
+    """True when the user picked ascites, including explicit none. Empty is not a pick."""
+    try:
+        _ascites_points(value)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _is_explicit_encephalopathy(value: Any) -> bool:
+    """True when the user picked encephalopathy, including explicit none."""
+    try:
+        _encephalopathy_points(value)
+        return True
+    except (TypeError, ValueError):
+        return False
 
 
 def class_from_score(score: int) -> str:
@@ -123,15 +149,18 @@ def resolve_child_pugh(case: dict) -> dict[str, Any]:
     alb = case.get("albumin_g_dl")
     inr = case.get("inr")
     has_labs = all(v is not None and v != "" for v in (bili, alb, inr))
+    has_signs = _is_explicit_ascites(case.get("ascites")) and _is_explicit_encephalopathy(
+        case.get("encephalopathy")
+    )
 
-    if has_labs:
+    if has_labs and has_signs:
         try:
             r = compute_child_pugh(
                 bili,
                 alb,
                 inr,
-                ascites=case.get("ascites") or "none",
-                encephalopathy=case.get("encephalopathy") or "none",
+                ascites=case.get("ascites"),
+                encephalopathy=case.get("encephalopathy"),
             )
             out["child_pugh"] = r["class"]
             out["child_pugh_score"] = r["score"]
@@ -148,6 +177,82 @@ def resolve_child_pugh(case: dict) -> dict[str, Any]:
             out["child_pugh"] = cp_u
             out["child_pugh_source"] = "entered"
     return out
+
+
+CALCULATOR_MODES = ("pediatric", "adult_hi")
+
+CHILD_PUGH_ON_CHILD_FLAG = (
+    "Child-Pugh is adult cirrhosis scoring; applying it at age < 18 is not a pediatric "
+    "liver-function scale."
+)
+
+HI_GATE_INCOMPLETE = (
+    "Hepatic-impairment cases require a Child-Pugh class (A/B/C) or complete "
+    "calculate-from-labs values: bilirubin, albumin, INR, and explicit ascites and "
+    "encephalopathy picks (including explicit none). There is no implicit none."
+)
+
+
+def resolve_calculator_mode(case: dict) -> str:
+    """Facade from the case. Age does not switch pediatric vs adult_hi."""
+    raw = case.get("calculator_mode")
+    if raw is None or str(raw).strip() == "":
+        return "pediatric"
+    mode = str(raw).strip().lower()
+    if mode not in CALCULATOR_MODES:
+        raise ValueError(
+            f"calculator_mode must be 'pediatric' or 'adult_hi', not {raw!r}. "
+            "Age does not switch facades."
+        )
+    return mode
+
+
+def hi_resolution_required(case: dict) -> bool:
+    """Adult HI always; pediatric only when the hepatic box is on."""
+    try:
+        mode = resolve_calculator_mode(case)
+    except ValueError:
+        return True
+    if mode == "adult_hi":
+        return True
+    return bool(case.get("hepatic_impairment"))
+
+
+def _has_entered_class(case: dict) -> bool:
+    return str(case.get("child_pugh") or "").strip().upper() in ("A", "B", "C")
+
+
+def _has_complete_labs(case: dict) -> bool:
+    bili = case.get("bilirubin_mg_dl")
+    alb = case.get("albumin_g_dl")
+    inr = case.get("inr")
+    if any(v is None or v == "" for v in (bili, alb, inr)):
+        return False
+    try:
+        if float(bili) < 0 or float(alb) < 0 or float(inr) <= 0:
+            return False
+    except (TypeError, ValueError):
+        return False
+    return _is_explicit_ascites(case.get("ascites")) and _is_explicit_encephalopathy(
+        case.get("encephalopathy")
+    )
+
+
+def hi_gate_error(case: dict) -> Optional[str]:
+    """Return a 400 message if this case cannot proceed, else None.
+
+    Pediatric + hepatic off is the healthy-liver path (no class required).
+    Adult HI and pediatric + hepatic on need class or complete labs.
+    """
+    try:
+        resolve_calculator_mode(case)
+    except ValueError as e:
+        return str(e)
+    if not hi_resolution_required(case):
+        return None
+    if _has_entered_class(case) or _has_complete_labs(case):
+        return None
+    return HI_GATE_INCOMPLETE
 
 
 def allergy_tokens_overlap(allergies: Optional[list], drug: str) -> list[str]:

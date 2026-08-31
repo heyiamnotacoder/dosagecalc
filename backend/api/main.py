@@ -14,6 +14,7 @@ import json
 import os
 import queue
 import threading
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -24,6 +25,7 @@ from pydantic import BaseModel, Field
 load_dotenv()  # pulls ANTHROPIC_API_KEY from backend/.env
 
 from agents.agent import ORCHESTRATOR_MODEL, run_case  # noqa: E402  (after load_dotenv)
+from engine.child_pugh import hi_gate_error  # noqa: E402
 from engine.pk_engine import (  # noqa: E402
     compute_pediatric_dose,
     renal_function_fraction_from_labs,
@@ -60,6 +62,13 @@ def _renal_fraction(case: "Case") -> float:
     return frac if frac is not None else 1.0
 
 
+def _enforce_hi_gate(case: "Case") -> None:
+    """Same incomplete-HI rejection as the form. Age does not switch facades."""
+    err = hi_gate_error(case.model_dump())
+    if err:
+        raise HTTPException(400, err)
+
+
 class Case(BaseModel):
     drug: str
     indication: str | None = None
@@ -88,6 +97,8 @@ class Case(BaseModel):
     formulation_mg_per_ml: float | None = Field(
         default=None, gt=0, description="Optional formulation strength in mg/mL"
     )
+    # Facade: age must not switch this. adult_hi implies hepatic impairment on.
+    calculator_mode: Literal["pediatric", "adult_hi"] = "pediatric"
 
 
 @app.get("/")
@@ -107,6 +118,7 @@ def health():
 @app.post("/calculate")
 def calculate(case: Case):
     """Full agentic pipeline — needs ANTHROPIC_API_KEY."""
+    _enforce_hi_gate(case)
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise HTTPException(400, "ANTHROPIC_API_KEY not set. Add it to backend/.env")
     result = run_case(case.model_dump())
@@ -123,6 +135,7 @@ def calculate_stream(case: Case):
     then a single `done` event carries the full result JSON (or an `error` event on failure).
     The frontend reads this to drive the live loading screen.
     """
+    _enforce_hi_gate(case)
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise HTTPException(400, "ANTHROPIC_API_KEY not set. Add it to backend/.env")
 
@@ -225,6 +238,7 @@ def chat(req: ChatRequest):
 def pk(case: Case):
     """DEV/EVAL ONLY — deterministic engine on the reviewed PK oracle, no API key required.
     This is a bench check for the math; the PRODUCT path is /calculate (live retrieval)."""
+    _enforce_hi_gate(case)
     oracle = _oracle_pk()
     seed = oracle.get(case.drug.strip().lower())
     if not seed:

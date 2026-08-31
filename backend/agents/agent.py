@@ -45,7 +45,11 @@ Pipeline (lean):
    grade = D, blocked=true, block_reason = "SAFETY STOP — CONTRAINDICATED: …", and put that
    string as the FIRST flag. Never invent a dose for a contraindicated patient. Always still
    fill contraindications_avoid so the clinician sees the full avoid-list.
-4. compute_pediatric_dose with retrieved PK + child covariates (use case renal/hepatic fractions).
+4. compute_pediatric_dose with retrieved PK + child covariates (use case renal fraction;
+   hepatic_function_fraction stays 1.0). Pediatric + hepatic on + hepatic fm ≥ 0.3: HI
+   rewrites the adult reference dose from the cited table, then allometry — do not invent an
+   OF. No cited applicable row → blocked/abstain, grade D. Adult HI label × allometry is
+   grade ceiling B; renal+HI stacked is ceiling C.
    Pass oral_bioavailability from the dossier; if a route is clinically non-viable (e.g. an oral
    route for a drug not systemically absorbed orally, F=0), pass routes_allowed (e.g. ["iv"]).
    If compute returns blocked=true the case is NOT prescribable: submit_recommendation with
@@ -319,15 +323,24 @@ def _build_compute(case: dict, state: dict):
                       "oral_bioavailability"):
                 if k in dossier and dossier[k] is not None:
                     merged[k] = dossier[k]
-            # Single HI resolver for both facades — never invent an organ-function fraction.
-            if case.get("hepatic_impairment") and dossier.get("hi_table") and case.get("child_pugh"):
-                from engine.hi_table import apply_hi_resolution
-                hi = apply_hi_resolution(case, dossier.get("hi_table"))
-                state["last_hi_resolution"] = hi
-                if hi.get("status") == "ok" and hi.get("kind") == "contraindicated":
-                    reason = (
-                        "SAFETY STOP — label contraindicated in this hepatic-impairment class "
-                        f"(Child-Pugh {case.get('child_pugh')})."
+            # Pediatric HI facade (#5): bake cited HI into adult dose, then allometry.
+            # hepatic_function_fraction stays 1.0. Adult HI interim rewrite until #6.
+            from engine.child_pugh import resolve_calculator_mode
+            from engine.pediatric_hi import run_pediatric_hi_facade
+
+            ped_hi = run_pediatric_hi_facade(
+                case,
+                dossier,
+                fm=merged.get("fm") or dossier.get("fm") or {},
+                route=merged.get("route") or case.get("route"),
+            )
+            state["last_pediatric_hi"] = ped_hi
+            if ped_hi.get("entered"):
+                merged["hepatic_function_fraction"] = 1.0
+                state["last_hi_resolution"] = ped_hi.get("resolution")
+                if ped_hi.get("blocked"):
+                    reason = ped_hi.get("block_reason") or (
+                        "SAFETY STOP — no cited applicable hepatic-impairment adjustment; abstain."
                     )
                     state["blocked_reason"] = reason
                     return {
@@ -336,8 +349,36 @@ def _build_compute(case: dict, state: dict):
                         "recommended_dose_mg_per_day": None,
                         "recommended_dose_mg_per_kg_per_day": None,
                     }
-                if hi.get("status") == "ok" and hi.get("adult_dose_mg_per_day") is not None:
-                    merged["adult_dose_mg_per_day"] = hi["adult_dose_mg_per_day"]
+                if ped_hi.get("adult_dose_mg_per_day") is not None:
+                    merged["adult_dose_mg_per_day"] = ped_hi["adult_dose_mg_per_day"]
+            else:
+                try:
+                    mode = resolve_calculator_mode(case)
+                except ValueError:
+                    mode = "pediatric"
+                if (
+                    mode == "adult_hi"
+                    and case.get("hepatic_impairment")
+                    and dossier.get("hi_table")
+                    and case.get("child_pugh")
+                ):
+                    from engine.hi_table import apply_hi_resolution
+                    hi = apply_hi_resolution(case, dossier.get("hi_table"))
+                    state["last_hi_resolution"] = hi
+                    if hi.get("status") == "ok" and hi.get("kind") == "contraindicated":
+                        reason = (
+                            "SAFETY STOP — label contraindicated in this hepatic-impairment class "
+                            f"(Child-Pugh {case.get('child_pugh')})."
+                        )
+                        state["blocked_reason"] = reason
+                        return {
+                            "blocked": True,
+                            "block_reason": reason,
+                            "recommended_dose_mg_per_day": None,
+                            "recommended_dose_mg_per_kg_per_day": None,
+                        }
+                    if hi.get("status") == "ok" and hi.get("adult_dose_mg_per_day") is not None:
+                        merged["adult_dose_mg_per_day"] = hi["adult_dose_mg_per_day"]
             # Oral + unknown F: pass None so the engine hard-stops (do not invent F=1.0).
             route = (merged.get("route") or case.get("route") or "iv").lower()
             if route == "oral" and "oral_bioavailability" not in merged:
@@ -618,6 +659,24 @@ def run_case(case: dict, on_step=None, max_turns: int = 12) -> dict:
                 _apply_organ_function_flags(
                     rec, case, applied_renal_frac=state.get("last_compute_renal_frac"),
                 )
+                from engine.pediatric_hi import (
+                    merge_pediatric_hi_into_recommendation,
+                    run_pediatric_hi_facade,
+                )
+                ped_hi = state.get("last_pediatric_hi")
+                if ped_hi is None:
+                    dossier = state.get("last_dossier") or {}
+                    ped_hi = run_pediatric_hi_facade(
+                        case, dossier, fm=dossier.get("fm") or {},
+                    )
+                    state["last_pediatric_hi"] = ped_hi
+                if ped_hi.get("blocked"):
+                    _force_safety_block(
+                        rec,
+                        ped_hi.get("block_reason")
+                        or "SAFETY STOP — no cited applicable hepatic-impairment adjustment; abstain.",
+                    )
+                merge_pediatric_hi_into_recommendation(rec, ped_hi)
                 attach_administration(rec, case)
                 return {
                     "recommendation": rec,

@@ -232,6 +232,7 @@ def extract_hi_table(
         "indication": table_ind,
         "indication_stratified": stratified,
         "mapping_flagged": mapping_flagged,
+        "product_route": _infer_product_route(" ".join((excerpt, cite, src))),
         "classes": classes,
     }
 
@@ -341,6 +342,94 @@ def apply_hi_resolution(case: dict, table: Optional[dict]) -> dict[str, Any]:
         user_adult_dose_mg_per_day=user_dose,
         indication=case.get("indication"),
     )
+
+
+# Oral high-extraction / first-pass — same rule for pediatric (#5) and adult HI (#6).
+# High-E oral HI is first-pass collapse; an IV/unspecified row is not that adjustment.
+HIGH_EXTRACTION_F_MAX = 0.3
+HIGH_EXTRACTION_EH_MIN = 0.7
+
+ORAL_HIGH_E_ABSTAIN = (
+    "SAFETY STOP — oral high-extraction / first-pass hepatic impairment: "
+    "the cited HI row is not explicitly for the oral product. Abstain."
+)
+
+_ORAL_PRODUCT_RE = re.compile(
+    r"\b(?:oral(?:ly)?|p\.?o\.?\b|by mouth|tablet[s]?|capsule[s]?|"
+    r"suspension|syrup|oral product|oral formulation)\b",
+    re.I,
+)
+_IV_PRODUCT_RE = re.compile(
+    r"\b(?:intravenous(?:ly)?|i\.?v\.?\b|infusion|injectable)\b",
+    re.I,
+)
+
+
+def _infer_product_route(text: str) -> Optional[str]:
+    blob = text or ""
+    has_oral = bool(_ORAL_PRODUCT_RE.search(blob))
+    has_iv = bool(_IV_PRODUCT_RE.search(blob))
+    if has_oral and not has_iv:
+        return "oral"
+    if has_iv and not has_oral:
+        return "iv"
+    return None
+
+
+def table_is_for_oral_product(table: Optional[dict]) -> bool:
+    """True only when the cited HI text is explicitly the oral product."""
+    if not table:
+        return False
+    if str(table.get("product_route") or "").strip().lower() == "oral":
+        return True
+    blob = " ".join(
+        str(table.get(k) or "") for k in ("excerpt", "citation", "product_route", "route")
+    )
+    return bool(_ORAL_PRODUCT_RE.search(blob))
+
+
+def is_high_extraction(dossier: Optional[dict], case: Optional[dict] = None) -> bool:
+    """High first-pass from cited F or EH — never a per-drug hardcoded list."""
+    src: dict[str, Any] = {}
+    if dossier:
+        src.update(dossier)
+    if case:
+        for k in ("oral_bioavailability", "hepatic_extraction_ratio"):
+            if case.get(k) is not None and src.get(k) is None:
+                src[k] = case[k]
+    f = src.get("oral_bioavailability")
+    try:
+        if f is not None and float(f) < HIGH_EXTRACTION_F_MAX:
+            return True
+    except (TypeError, ValueError):
+        pass
+    eh = src.get("hepatic_extraction_ratio")
+    try:
+        if eh is not None and float(eh) >= HIGH_EXTRACTION_EH_MIN:
+            return True
+    except (TypeError, ValueError):
+        pass
+    return False
+
+
+def oral_high_extraction_abstain(
+    case: dict,
+    table: Optional[dict],
+    dossier: Optional[dict] = None,
+) -> Optional[str]:
+    """Abstain reason for oral high-E unless the cited row is the oral product.
+
+    IV or not-high-E: no extra gate. Unknown F/EH is not classified as high-E
+    (cite-or-abstain — do not invent extraction).
+    """
+    route = str((case or {}).get("route") or "iv").strip().lower()
+    if route != "oral":
+        return None
+    if not is_high_extraction(dossier, case):
+        return None
+    if table_is_for_oral_product(table):
+        return None
+    return ORAL_HIGH_E_ABSTAIN
 
 
 _LABEL_HI_FIELDS = (

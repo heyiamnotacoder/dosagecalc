@@ -616,5 +616,26 @@ if __name__ == "__main__":
     test_normalize_adult_hi_sets_hepatic_and_flags_child_pugh_on_child()
     test_resolve_does_not_default_missing_signs()
     test_server_rejects_incomplete_hi()
+    from tests.test_pediatric_hi import (
+        test_hepatic_fm_share_and_gate,
+        test_bake_then_allometry_keeps_hepatic_of_one,
+        test_low_hepatic_fm_does_not_enter,
+        test_no_cited_row_abstains,
+        test_adult_label_grade_cap_b,
+        test_renal_plus_hi_stacked_cap_c,
+        test_oral_high_e_requires_oral_product_row,
+        test_pediatric_guideline_beats_adult_label,
+        test_cap_grade_never_raises,
+    )
+    print("Pediatric HI facade (issue #5):")
+    test_hepatic_fm_share_and_gate()
+    test_bake_then_allometry_keeps_hepatic_of_one()
+    test_low_hepatic_fm_does_not_enter()
+    test_no_cited_row_abstains()
+    test_adult_label_grade_cap_b()
+    test_renal_plus_hi_stacked_cap_c()
+    test_oral_high_e_requires_oral_product_row()
+    test_pediatric_guideline_beats_adult_label()
+    test_cap_grade_never_raises()
     concordance_check()
     print("\nAll structural tests passed.")
